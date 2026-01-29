@@ -3458,6 +3458,30 @@
             // Show open seating page
             document.getElementById('openSeatingPage').classList.add('active');
             
+            // Include current working schedule in openSeatingData (if we have an active schedule)
+            if (state.scheduleDate && state.selectedPlatoon && state.selectedShift) {
+                const currentScheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
+                state.openSeatingData[currentScheduleKey] = {
+                    date: state.scheduleDate,
+                    platoon: state.selectedPlatoon,
+                    shift: state.selectedShift,
+                    dispatchDesks: {
+                        assignments: { ...state.assignments },
+                        deskHours: { ...state.deskHours },
+                        deskStatus: { ...state.deskStatus },
+                        breakTimes: { ...state.breakTimes }
+                    },
+                    callTakeDesks: {
+                        assignments: { ...state.callTakeAssignments },
+                        deskHours: { ...state.callTakeDeskHours },
+                        deskStatus: { ...state.callTakeDeskStatus },
+                        breakTimes: { ...state.callTakeBreakTimes }
+                    },
+                    relieverDuties: [...state.relieverDuties],
+                    additionalMembers: [...state.additionalMembers]
+                };
+            }
+            
             // Generate seating charts
             generateOpenSeatingCharts();
             
@@ -3476,6 +3500,30 @@
             
             // Show agent map page
             document.getElementById('agentMapPage').classList.add('active');
+            
+            // Include current working schedule in openSeatingData (if we have an active schedule)
+            if (state.scheduleDate && state.selectedPlatoon && state.selectedShift) {
+                const currentScheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
+                state.openSeatingData[currentScheduleKey] = {
+                    date: state.scheduleDate,
+                    platoon: state.selectedPlatoon,
+                    shift: state.selectedShift,
+                    dispatchDesks: {
+                        assignments: { ...state.assignments },
+                        deskHours: { ...state.deskHours },
+                        deskStatus: { ...state.deskStatus },
+                        breakTimes: { ...state.breakTimes }
+                    },
+                    callTakeDesks: {
+                        assignments: { ...state.callTakeAssignments },
+                        deskHours: { ...state.callTakeDeskHours },
+                        deskStatus: { ...state.callTakeDeskStatus },
+                        breakTimes: { ...state.callTakeBreakTimes }
+                    },
+                    relieverDuties: [...state.relieverDuties],
+                    additionalMembers: [...state.additionalMembers]
+                };
+            }
             
             // Generate agent map charts
             generateAgentMapCharts();
@@ -4764,29 +4812,32 @@
                 date: state.scheduleDate,
                 shift: state.selectedShift,
                 dispatchDesks: {
-                    assignments: state.assignments,
-                    deskHours: state.deskHours,
-                    deskStatus: state.deskStatus,
-                    breakTimes: state.breakTimes
+                    assignments: { ...state.assignments },
+                    deskHours: { ...state.deskHours },
+                    deskStatus: { ...state.deskStatus },
+                    breakTimes: { ...state.breakTimes }
                 },
                 callTakeDesks: {
-                    assignments: state.callTakeAssignments,
-                    deskHours: state.callTakeDeskHours,
-                    deskStatus: state.callTakeDeskStatus,
-                    breakTimes: state.callTakeBreakTimes
+                    assignments: { ...state.callTakeAssignments },
+                    deskHours: { ...state.callTakeDeskHours },
+                    deskStatus: { ...state.callTakeDeskStatus },
+                    breakTimes: { ...state.callTakeBreakTimes }
                 },
-                relieverDuties: state.relieverDuties,
-                additionalMembers: state.additionalMembers
+                relieverDuties: [...state.relieverDuties],
+                additionalMembers: [...state.additionalMembers]
             };
             
-            // Store in openSeatingData for the seating chart
+            // Store in openSeatingData - overwrite any existing schedule for this key
             const scheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
             state.openSeatingData[scheduleKey] = schedule;
             
-            // Save to database
+            // Save to database (upsert will overwrite existing)
             const saved = await saveScheduleToDB(schedule);
             
             if (saved) {
+                // Reload all schedules from database to ensure sync
+                await loadAllSchedulesFromDB();
+                
                 const dispatchAssignedCount = Object.keys(state.assignments).length;
                 const callTakeAssignedCount = Object.keys(state.callTakeAssignments).length;
                 const relieverCount = state.relieverDuties.length;
