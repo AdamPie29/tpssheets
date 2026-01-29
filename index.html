@@ -5474,9 +5474,56 @@
                                 `).join('')}
                             </div>
                         </div>
+                        <div style="margin-top: 1rem; text-align: right;">
+                            <button class="btn btn-primary" onclick="saveRelieverDetails(${reliever.id})" style="padding: 0.5rem 1.5rem;">Save Details</button>
+                        </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        async function saveRelieverDetails(relieverId) {
+            // Save the entire schedule to the database
+            const schedule = {
+                platoon: state.selectedPlatoon,
+                date: state.scheduleDate,
+                shift: state.selectedShift,
+                dispatchDesks: {
+                    assignments: { ...state.assignments },
+                    deskHours: { ...state.deskHours },
+                    deskStatus: { ...state.deskStatus },
+                    breakTimes: { ...state.breakTimes }
+                },
+                callTakeDesks: {
+                    assignments: { ...state.callTakeAssignments },
+                    deskHours: { ...state.callTakeDeskHours },
+                    deskStatus: { ...state.callTakeDeskStatus },
+                    breakTimes: { ...state.callTakeBreakTimes }
+                },
+                relieverDuties: [...state.relieverDuties],
+                additionalMembers: [...state.additionalMembers]
+            };
+            
+            // Remove old entry from openSeatingData first
+            const scheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
+            delete state.openSeatingData[scheduleKey];
+            
+            // Save to database
+            const saved = await saveScheduleToDB(schedule);
+            
+            if (saved) {
+                // Reload all schedules from database to ensure sync
+                await loadAllSchedulesFromDB();
+                
+                const reliever = state.relieverDuties.find(r => r.id === relieverId);
+                const relieverName = reliever && reliever.memberId 
+                    ? masterPersonnel.find(m => m.id === reliever.memberId)?.name || 'Unknown'
+                    : 'Unassigned';
+                
+                alert(`Reliever ${relieverId} details saved!\n\nMember: ${relieverName}\n\nOpen Seating and Agent Map have been updated.`);
+            } else {
+                alert('Error saving reliever details. Please try again.');
+            }
         }
 
         // Open Seating Chart Generation
