@@ -3446,7 +3446,7 @@
             window.history.pushState({}, '', '?page=schedule');
         }
 
-        function navigateToOpenSeating() {
+        async function navigateToOpenSeating() {
             // Hide all other pages
             document.querySelectorAll('#page1, #page2, #page3, #masterPersonnelPage, #shiftSchedulePage, #agentMapPage').forEach(page => {
                 page.classList.remove('active');
@@ -3458,38 +3458,17 @@
             // Show open seating page
             document.getElementById('openSeatingPage').classList.add('active');
             
-            // Include current working schedule in openSeatingData (if we have an active schedule)
-            if (state.scheduleDate && state.selectedPlatoon && state.selectedShift) {
-                const currentScheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
-                state.openSeatingData[currentScheduleKey] = {
-                    date: state.scheduleDate,
-                    platoon: state.selectedPlatoon,
-                    shift: state.selectedShift,
-                    dispatchDesks: {
-                        assignments: { ...state.assignments },
-                        deskHours: { ...state.deskHours },
-                        deskStatus: { ...state.deskStatus },
-                        breakTimes: { ...state.breakTimes }
-                    },
-                    callTakeDesks: {
-                        assignments: { ...state.callTakeAssignments },
-                        deskHours: { ...state.callTakeDeskHours },
-                        deskStatus: { ...state.callTakeDeskStatus },
-                        breakTimes: { ...state.callTakeBreakTimes }
-                    },
-                    relieverDuties: [...state.relieverDuties],
-                    additionalMembers: [...state.additionalMembers]
-                };
-            }
+            // Reload all schedules fresh from database to ensure we have latest saved data
+            await loadAllSchedulesFromDB();
             
-            // Generate seating charts
+            // Generate seating charts (only shows saved data from database)
             generateOpenSeatingCharts();
             
             // Update URL
             window.history.pushState({}, '', '?page=seating');
         }
 
-        function navigateToAgentMap() {
+        async function navigateToAgentMap() {
             // Hide all other pages
             document.querySelectorAll('#page1, #page2, #page3, #masterPersonnelPage, #shiftSchedulePage, #openSeatingPage').forEach(page => {
                 page.classList.remove('active');
@@ -3501,31 +3480,10 @@
             // Show agent map page
             document.getElementById('agentMapPage').classList.add('active');
             
-            // Include current working schedule in openSeatingData (if we have an active schedule)
-            if (state.scheduleDate && state.selectedPlatoon && state.selectedShift) {
-                const currentScheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
-                state.openSeatingData[currentScheduleKey] = {
-                    date: state.scheduleDate,
-                    platoon: state.selectedPlatoon,
-                    shift: state.selectedShift,
-                    dispatchDesks: {
-                        assignments: { ...state.assignments },
-                        deskHours: { ...state.deskHours },
-                        deskStatus: { ...state.deskStatus },
-                        breakTimes: { ...state.breakTimes }
-                    },
-                    callTakeDesks: {
-                        assignments: { ...state.callTakeAssignments },
-                        deskHours: { ...state.callTakeDeskHours },
-                        deskStatus: { ...state.callTakeDeskStatus },
-                        breakTimes: { ...state.callTakeBreakTimes }
-                    },
-                    relieverDuties: [...state.relieverDuties],
-                    additionalMembers: [...state.additionalMembers]
-                };
-            }
+            // Reload all schedules fresh from database to ensure we have latest saved data
+            await loadAllSchedulesFromDB();
             
-            // Generate agent map charts
+            // Generate agent map charts (only shows saved data from database)
             generateAgentMapCharts();
             
             // Update URL
