@@ -2123,9 +2123,13 @@
         <!-- Open Seating Page -->
         <div id="openSeatingPage" class="page">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 class="card-title" style="margin: 0;">Open Seating - 24 Hour Desk Occupancy</h2>
                     <button class="btn btn-secondary" onclick="navigateToScheduling()">Back to Scheduling</button>
+                </div>
+                <div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: var(--primary); border-radius: 6px; display: inline-block;">
+                    <span style="font-weight: 600;">Viewing Date: </span>
+                    <span id="openSeatingDate" style="font-weight: 700;"></span>
                 </div>
 
                 <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 2rem;">
@@ -2164,9 +2168,13 @@
         <!-- Agent Map Page -->
         <div id="agentMapPage" class="page">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 class="card-title" style="margin: 0;">Agent Map - 24 Hour Coverage by Name</h2>
                     <button class="btn btn-secondary" onclick="navigateToScheduling()">Back to Scheduling</button>
+                </div>
+                <div style="margin-bottom: 1.5rem; padding: 0.75rem 1rem; background: var(--primary); border-radius: 6px; display: inline-block;">
+                    <span style="font-weight: 600;">Viewing Date: </span>
+                    <span id="agentMapDate" style="font-weight: 700;"></span>
                 </div>
 
                 <div class="seating-chart-section">
@@ -3485,10 +3493,19 @@
             // Show open seating page
             document.getElementById('openSeatingPage').classList.add('active');
             
+            // Set the date display
+            const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+            if (selectedDate) {
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const dateObj = new Date(year, month - 1, day);
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('openSeatingDate').textContent = dateObj.toLocaleDateString('en-US', options);
+            }
+            
             // Reload all schedules fresh from database to ensure we have latest saved data
             await loadAllSchedulesFromDB();
             
-            // Generate seating charts (only shows saved data from database)
+            // Generate seating charts (filtered by selected date)
             generateOpenSeatingCharts();
             
             // Update URL
@@ -3504,10 +3521,19 @@
             // Show agent map page
             document.getElementById('agentMapPage').classList.add('active');
             
+            // Set the date display
+            const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+            if (selectedDate) {
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const dateObj = new Date(year, month - 1, day);
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('agentMapDate').textContent = dateObj.toLocaleDateString('en-US', options);
+            }
+            
             // Reload all schedules fresh from database to ensure we have latest saved data
             await loadAllSchedulesFromDB();
             
-            // Generate agent map charts (only shows saved data from database)
+            // Generate agent map charts (filtered by selected date)
             generateAgentMapCharts();
             
             // Update URL
@@ -5903,10 +5929,16 @@
             let count = 0;
             let names = [];
             
-            // Loop through all saved schedules
+            // Get the selected date
+            const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+            
+            // Loop through saved schedules, filtering by selected date
             Object.keys(state.openSeatingData).forEach(key => {
                 const schedule = state.openSeatingData[key];
                 if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
+                
+                // Only show schedules for the selected date
+                if (schedule.date !== selectedDate) return;
                 
                 const assignments = deskType === 'dispatch' 
                     ? (schedule.dispatchDesks.assignments || {})
