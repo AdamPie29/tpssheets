@@ -864,7 +864,7 @@
             color: var(--text-secondary);
         }
 
-        .desk-table tbody tr.broken .member-select {
+        .desk-table tbody tr.broken .member-autocomplete {
             cursor: not-allowed;
             opacity: 0.5;
         }
@@ -887,7 +887,12 @@
             min-width: 200px;
         }
 
-        .member-select {
+        .member-autocomplete-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .member-autocomplete {
             width: 100%;
             background: var(--bg-dark);
             border: 2px solid var(--border);
@@ -895,24 +900,102 @@
             padding: 0.6rem 0.8rem;
             color: var(--text-primary);
             font-size: 0.85rem;
-            cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .member-select:hover {
+        .member-autocomplete:hover {
             border-color: var(--accent);
         }
 
-        .member-select:focus {
+        .member-autocomplete:focus {
             border-color: var(--accent);
             outline: none;
             box-shadow: 0 0 0 2px rgba(217, 79, 42, 0.2);
         }
 
-        .member-select option {
+        .member-autocomplete.has-assignment {
+            background: rgba(46, 160, 67, 0.15);
+            border-color: var(--success);
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
             background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 0.5rem;
+            border: 2px solid var(--accent);
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 0.6rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: rgba(217, 79, 42, 0.2);
+        }
+
+        .autocomplete-item.assigned {
+            opacity: 0.5;
+            color: var(--text-secondary);
+        }
+
+        .autocomplete-item .member-name {
+            font-weight: 600;
+        }
+
+        .autocomplete-item .member-info {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .autocomplete-item .member-tags {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.3rem;
+            flex-wrap: wrap;
+        }
+
+        .clear-assignment-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.8rem;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .member-autocomplete-wrapper.has-value .clear-assignment-btn {
+            display: flex;
         }
 
         .remove-member {
@@ -3860,9 +3943,9 @@
                 const index = parseInt(deskNum.substring(2)) - 1;
                 const deskLabel = callTakeLabels[index];
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
-                // Reset the select
-                const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
-                if (select) select.value = '';
+                // Reset the input
+                const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
+                if (input) input.value = '';
                 return;
             }
             
@@ -3870,9 +3953,11 @@
             Object.keys(state.callTakeAssignments).forEach(desk => {
                 if (state.callTakeAssignments[desk] === memberId && desk !== deskNum) {
                     delete state.callTakeAssignments[desk];
-                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldSelect) {
-                        oldSelect.value = '';
+                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="calltake"]`);
+                    if (oldInput) {
+                        oldInput.value = '';
+                        oldInput.classList.remove('has-assignment');
+                        oldInput.parentElement.classList.remove('has-value');
                     }
                 }
             });
@@ -3881,9 +3966,11 @@
             Object.keys(state.assignments).forEach(desk => {
                 if (state.assignments[desk] === memberId) {
                     delete state.assignments[desk];
-                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"]`);
-                    if (oldSelect) {
-                        oldSelect.value = '';
+                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="dispatch"]`);
+                    if (oldInput) {
+                        oldInput.value = '';
+                        oldInput.classList.remove('has-assignment');
+                        oldInput.parentElement.classList.remove('has-value');
                     }
                 }
             });
@@ -3899,18 +3986,17 @@
                 }
             }
             
-            // Update the select value
-            const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
-            if (select) {
-                select.value = memberId;
+            // Update the input value
+            const member = masterPersonnel.find(m => m.id === memberId);
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
+            if (input && member) {
+                input.value = member.name;
+                input.classList.add('has-assignment');
+                input.parentElement.classList.add('has-value');
             }
             
             // Refresh available members list
             loadAvailableMembers();
-            
-            // Refresh all member selects to show updated assignment status
-            populateMemberSelects('dispatch');
-            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -4066,9 +4152,14 @@
                         </div>
                     </td>
                     <td class="member-cell">
-                        <select class="member-select" data-desk="${deskNum}" onchange="handleMemberSelect(this, '${deskNum}', 'dispatch')">
-                            <option value="">Select member...</option>
-                        </select>
+                        <div class="member-autocomplete-wrapper" data-desk="${deskNum}" data-type="dispatch">
+                            <input type="text" class="member-autocomplete" data-desk="${deskNum}" data-type="dispatch"
+                                   placeholder="Type surname..." 
+                                   onfocus="showAutocompleteDropdown(this, '${deskNum}', 'dispatch')"
+                                   oninput="filterAutocomplete(this, '${deskNum}', 'dispatch')">
+                            <button class="clear-assignment-btn" onclick="clearAssignment('${deskNum}', 'dispatch')" title="Clear assignment">×</button>
+                            <div class="autocomplete-dropdown" data-desk="${deskNum}" data-type="dispatch"></div>
+                        </div>
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4141,16 +4232,7 @@
             }
             
             // Populate member select dropdowns
-            populateMemberSelects('dispatch');
-            
-            // Restore existing assignments
-            Object.keys(state.assignments).forEach(deskNum => {
-                const memberId = state.assignments[deskNum];
-                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-                if (select) {
-                    select.value = memberId;
-                }
-            });
+            populateAutocompleteInputs();
         }
         
         // Create a desk instance row
@@ -4179,9 +4261,14 @@
                     </div>
                 </td>
                 <td class="member-cell">
-                    <select class="member-select" data-desk="${instance.id}" onchange="handleMemberSelect(this, '${instance.id}', '${deskType}')">
-                        <option value="">Select member...</option>
-                    </select>
+                    <div class="member-autocomplete-wrapper" data-desk="${instance.id}" data-type="${deskType}">
+                        <input type="text" class="member-autocomplete" data-desk="${instance.id}" data-type="${deskType}"
+                               placeholder="Type surname..." 
+                               onfocus="showAutocompleteDropdown(this, '${instance.id}', '${deskType}')"
+                               oninput="filterAutocomplete(this, '${instance.id}', '${deskType}')">
+                        <button class="clear-assignment-btn" onclick="clearAssignment('${instance.id}', '${deskType}')" title="Clear assignment">×</button>
+                        <div class="autocomplete-dropdown" data-desk="${instance.id}" data-type="${deskType}"></div>
+                    </div>
                 </td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4420,9 +4507,14 @@
                         </div>
                     </td>
                     <td class="member-cell">
-                        <select class="member-select" data-desk="${deskNum}" data-type="calltake" onchange="handleMemberSelect(this, '${deskNum}', 'calltake')">
-                            <option value="">Select member...</option>
-                        </select>
+                        <div class="member-autocomplete-wrapper" data-desk="${deskNum}" data-type="calltake">
+                            <input type="text" class="member-autocomplete" data-desk="${deskNum}" data-type="calltake"
+                                   placeholder="Type surname..." 
+                                   onfocus="showAutocompleteDropdown(this, '${deskNum}', 'calltake')"
+                                   oninput="filterAutocomplete(this, '${deskNum}', 'calltake')">
+                            <button class="clear-assignment-btn" onclick="clearAssignment('${deskNum}', 'calltake')" title="Clear assignment">×</button>
+                            <div class="autocomplete-dropdown" data-desk="${deskNum}" data-type="calltake"></div>
+                        </div>
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4494,71 +4586,131 @@
                 }
             });
             
-            // Populate member select dropdowns
-            populateMemberSelects('calltake');
-            
-            // Restore existing assignments
-            Object.keys(state.callTakeAssignments).forEach(deskNum => {
-                const memberId = state.callTakeAssignments[deskNum];
-                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-                if (select) {
-                    select.value = memberId;
-                }
-            });
+            // Populate autocomplete inputs
+            populateAutocompleteInputs();
         }
 
-        // Populate member select dropdowns
-        function populateMemberSelects(deskType) {
-            const selects = document.querySelectorAll(`.member-select${deskType === 'calltake' ? '[data-type="calltake"]' : ':not([data-type="calltake"])'}`);
-            
-            selects.forEach(select => {
-                const deskNum = select.dataset.desk;
-                const currentValue = select.value;
-                
-                // Get appropriate members based on desk type
-                let availableMembers;
-                if (deskType === 'dispatch') {
-                    // Only dispatchers for dispatch desks
-                    availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
-                } else {
-                    // All members for call take desks
-                    availableMembers = masterPersonnel;
+        // Populate autocomplete inputs with current assignments
+        function populateAutocompleteInputs() {
+            // Populate dispatch desk inputs
+            Object.keys(state.assignments).forEach(deskNum => {
+                const memberId = state.assignments[deskNum];
+                const member = masterPersonnel.find(m => m.id === memberId);
+                if (member) {
+                    const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
+                    if (input) {
+                        input.value = member.name;
+                        input.classList.add('has-assignment');
+                        input.parentElement.classList.add('has-value');
+                    }
                 }
-                
-                // Sort by name
-                availableMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
-                
-                // Build options HTML
-                let optionsHTML = '<option value="">Select member...</option>';
-                availableMembers.forEach(member => {
-                    const isAssigned = Object.values(state.assignments).includes(member.id) || 
-                                       Object.values(state.callTakeAssignments).includes(member.id) ||
-                                       state.relieverDuties.some(r => r.memberId === member.id);
-                    const assignedText = isAssigned ? ' (assigned)' : '';
-                    optionsHTML += `<option value="${member.id}">${member.name} - ${member.platoon}${assignedText}</option>`;
-                });
-                
-                select.innerHTML = optionsHTML;
-                
-                // Restore selected value
-                if (currentValue) {
-                    select.value = currentValue;
+            });
+            
+            // Populate call take desk inputs
+            Object.keys(state.callTakeAssignments).forEach(deskNum => {
+                const memberId = state.callTakeAssignments[deskNum];
+                const member = masterPersonnel.find(m => m.id === memberId);
+                if (member) {
+                    const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
+                    if (input) {
+                        input.value = member.name;
+                        input.classList.add('has-assignment');
+                        input.parentElement.classList.add('has-value');
+                    }
                 }
             });
         }
         
-        // Handle member selection from dropdown
-        function handleMemberSelect(selectElement, deskNum, deskType) {
-            const memberId = parseInt(selectElement.value);
+        // Show autocomplete dropdown
+        function showAutocompleteDropdown(input, deskNum, deskType) {
+            // Close any other open dropdowns
+            document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
             
-            if (!memberId) {
-                // Clear assignment
-                if (deskType === 'dispatch') {
-                    removeMember(deskNum);
-                } else {
-                    removeCallTakeMember(deskNum);
-                }
-                return;
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-desk="${deskNum}"][data-type="${deskType}"]`);
+            if (dropdown) {
+                buildAutocompleteList(dropdown, '', deskNum, deskType);
+                dropdown.classList.add('show');
+            }
+        }
+        
+        // Filter autocomplete based on input
+        function filterAutocomplete(input, deskNum, deskType) {
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-desk="${deskNum}"][data-type="${deskType}"]`);
+            if (dropdown) {
+                buildAutocompleteList(dropdown, input.value, deskNum, deskType);
+                dropdown.classList.add('show');
+            }
+        }
+        
+        // Build autocomplete list
+        function buildAutocompleteList(dropdown, filter, deskNum, deskType) {
+            // Get appropriate members based on desk type
+            let availableMembers;
+            if (deskType === 'dispatch') {
+                // Only dispatchers for dispatch desks
+                availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
+            } else {
+                // All members for call take desks
+                availableMembers = masterPersonnel;
+            }
+            
+            // Sort by name
+            availableMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Filter by search term (match surname at start)
+            if (filter) {
+                const searchTerm = filter.toLowerCase();
+                availableMembers = availableMembers.filter(m => 
+                    m.name.toLowerCase().startsWith(searchTerm) || 
+                    m.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            const tagClasses = {
+                'Calltaker': 'tag-calltaker',
+                'Dispatcher': 'tag-dispatcher',
+                'ODT': 'tag-odt',
+                'TRNG': 'tag-trng',
+                'TCL': 'tag-tcl',
+                'ROC': 'tag-roc'
+            };
+            
+            // Build dropdown HTML
+            let html = '';
+            availableMembers.forEach(member => {
+                const isAssigned = Object.values(state.assignments).includes(member.id) || 
+                                   Object.values(state.callTakeAssignments).includes(member.id) ||
+                                   state.relieverDuties.some(r => r.memberId === member.id);
+                
+                const tagsHTML = member.tags && member.tags.length > 0 
+                    ? member.tags.map(tag => 
+                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;">${tag}</span>`
+                      ).join('')
+                    : '';
+                
+                html += `
+                    <div class="autocomplete-item ${isAssigned ? 'assigned' : ''}" 
+                         onclick="selectAutocompleteItem(${member.id}, '${deskNum}', '${deskType}')">
+                        <div class="member-name">${member.name}</div>
+                        <div class="member-info">Platoon ${member.platoon} • Badge: ${member.badge}${isAssigned ? ' • (assigned)' : ''}</div>
+                        ${tagsHTML ? `<div class="member-tags">${tagsHTML}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            if (availableMembers.length === 0) {
+                html = '<div class="autocomplete-item" style="color: var(--text-secondary); cursor: default;">No matching members</div>';
+            }
+            
+            dropdown.innerHTML = html;
+        }
+        
+        // Select item from autocomplete
+        function selectAutocompleteItem(memberId, deskNum, deskType) {
+            // Hide dropdown
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-desk="${deskNum}"][data-type="${deskType}"]`);
+            if (dropdown) {
+                dropdown.classList.remove('show');
             }
             
             // Assign the member
@@ -4567,7 +4719,41 @@
             } else {
                 assignCallTakeMember(memberId, deskNum);
             }
+            
+            // Update input with member name
+            const member = masterPersonnel.find(m => m.id === memberId);
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="${deskType}"]`);
+            if (input && member) {
+                input.value = member.name;
+                input.classList.add('has-assignment');
+                input.parentElement.classList.add('has-value');
+            }
         }
+        
+        // Clear assignment
+        function clearAssignment(deskNum, deskType) {
+            // Clear the input
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="${deskType}"]`);
+            if (input) {
+                input.value = '';
+                input.classList.remove('has-assignment');
+                input.parentElement.classList.remove('has-value');
+            }
+            
+            // Remove the assignment
+            if (deskType === 'dispatch') {
+                removeMember(deskNum);
+            } else {
+                removeCallTakeMember(deskNum);
+            }
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.member-autocomplete-wrapper')) {
+                document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
+            }
+        });
 
         function updateBreakTime(deskNum, breakType, value) {
             if (!state.breakTimes[deskNum]) {
@@ -4749,18 +4935,16 @@
         function removeCallTakeMember(deskNum) {
             delete state.callTakeAssignments[deskNum];
             
-            // Clear the select
-            const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
-            if (select) {
-                select.value = '';
+            // Clear the input
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
+            if (input) {
+                input.value = '';
+                input.classList.remove('has-assignment');
+                input.parentElement.classList.remove('has-value');
             }
             
             // Refresh available members list
             loadAvailableMembers();
-            
-            // Refresh all member selects
-            populateMemberSelects('dispatch');
-            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -4801,9 +4985,9 @@
             // Check if member has Dispatcher tag
             if (!member.tags || !member.tags.includes('Dispatcher')) {
                 alert(`Cannot assign ${member.name} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
-                // Reset the select
-                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-                if (select) select.value = '';
+                // Reset the input
+                const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
+                if (input) input.value = '';
                 return;
             }
             
@@ -4811,9 +4995,9 @@
             if (!isInstance && state.deskStatus[deskNum] === false) {
                 const deskLabel = deskLabels[deskNum] || `PD${deskNum}`;
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
-                // Reset the select
-                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-                if (select) select.value = '';
+                // Reset the input
+                const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
+                if (input) input.value = '';
                 return;
             }
             
@@ -4821,10 +5005,12 @@
             Object.keys(state.assignments).forEach(desk => {
                 if (state.assignments[desk] === memberId && desk !== deskNum) {
                     delete state.assignments[desk];
-                    // Clear that desk's select
-                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"]`);
-                    if (oldSelect) {
-                        oldSelect.value = '';
+                    // Clear that desk's input
+                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="dispatch"]`);
+                    if (oldInput) {
+                        oldInput.value = '';
+                        oldInput.classList.remove('has-assignment');
+                        oldInput.parentElement.classList.remove('has-value');
                     }
                 }
             });
@@ -4833,9 +5019,11 @@
             Object.keys(state.callTakeAssignments).forEach(desk => {
                 if (state.callTakeAssignments[desk] === memberId) {
                     delete state.callTakeAssignments[desk];
-                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldSelect) {
-                        oldSelect.value = '';
+                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="calltake"]`);
+                    if (oldInput) {
+                        oldInput.value = '';
+                        oldInput.classList.remove('has-assignment');
+                        oldInput.parentElement.classList.remove('has-value');
                     }
                 }
             });
@@ -4850,18 +5038,16 @@
                 }
             }
             
-            // Update the select value
-            const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-            if (select) {
-                select.value = memberId;
+            // Update the input value
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
+            if (input) {
+                input.value = member.name;
+                input.classList.add('has-assignment');
+                input.parentElement.classList.add('has-value');
             }
             
             // Refresh available members list
             loadAvailableMembers();
-            
-            // Refresh all member selects to show updated assignment status
-            populateMemberSelects('dispatch');
-            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -4876,18 +5062,16 @@
         function removeMember(deskNum) {
             delete state.assignments[deskNum];
             
-            // Clear the select
-            const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
-            if (select) {
-                select.value = '';
+            // Clear the input
+            const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
+            if (input) {
+                input.value = '';
+                input.classList.remove('has-assignment');
+                input.parentElement.classList.remove('has-value');
             }
             
             // Refresh available members list
             loadAvailableMembers();
-            
-            // Refresh all member selects
-            populateMemberSelects('dispatch');
-            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
