@@ -4010,7 +4010,7 @@
                 
                 return `
                     <div class="member-chip ${isAssigned ? 'assigned' : 'draggable'}" 
-                         draggable="${!isAssigned}" 
+                         draggable="${isAssigned ? 'false' : 'true'}" 
                          data-id="${member.id}"
                          style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
                         <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
@@ -4869,14 +4869,17 @@
             
             if (!memberId || !targetDesk) return false;
             
+            // Check if this is an instance desk
+            const isInstance = targetDesk.includes('-');
+            const baseDeskNum = isInstance ? targetDesk.split('-')[0] : targetDesk;
+            
             // Determine which state objects to use
             const isCallTake = targetType === 'calltake' || targetDesk.startsWith('CT');
             const statusObj = isCallTake ? state.callTakeDeskStatus : state.deskStatus;
             const assignmentObj = isCallTake ? state.callTakeAssignments : state.assignments;
             
-            // Get member details
-            const allMembers = [...state.platoonMembers, ...state.additionalMembers];
-            const member = allMembers.find(m => m.id === memberId);
+            // Get member details from masterPersonnel
+            const member = masterPersonnel.find(m => m.id === memberId);
             
             if (!member) return false;
             
@@ -4886,8 +4889,8 @@
                 return false;
             }
             
-            // Check if target desk is broken
-            if (statusObj[targetDesk] === false) {
+            // Check if target desk is broken (only for base desks, not instances)
+            if (!isInstance && statusObj[targetDesk] === false) {
                 const deskLabel = isCallTake ? callTakeLabels[parseInt(targetDesk.substring(2)) - 1] : (deskLabels[targetDesk] || `PD${targetDesk}`);
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
                 return false;
@@ -4903,10 +4906,11 @@
                     return false;
                 }
                 
+                const sourceIsInstance = sourceDesk.includes('-');
                 const sourceStatusObj = sourceIsCallTake ? state.callTakeDeskStatus : state.deskStatus;
                 
-                // Check if source desk is broken
-                if (sourceStatusObj[sourceDesk] === false) {
+                // Check if source desk is broken (only for base desks)
+                if (!sourceIsInstance && sourceStatusObj[sourceDesk] === false) {
                     const sourceDeskLabel = sourceIsCallTake ? callTakeLabels[parseInt(sourceDesk.substring(2)) - 1] : (deskLabels[sourceDesk] || `PD${sourceDesk}`);
                     alert(`Cannot swap from ${sourceDeskLabel} - desk is marked as broken`);
                     return false;
@@ -4914,7 +4918,7 @@
                 
                 // For dispatch desks, check that the member being moved has Dispatcher tag
                 if (!isCallTake) {
-                    const swappingMember = allMembers.find(m => m.id === memberId);
+                    const swappingMember = masterPersonnel.find(m => m.id === memberId);
                     if (!swappingMember || !swappingMember.tags || !swappingMember.tags.includes('Dispatcher')) {
                         alert(`Cannot move ${swappingMember?.name || 'this member'} to dispatch desk.\n\nThis member does not have Dispatcher certification.`);
                         return false;
@@ -4929,9 +4933,8 @@
                 assignmentObj[targetDesk] = memberId;
                 
                 // Update both displays
-                const allMembers = [...state.platoonMembers, ...state.additionalMembers];
-                const sourceMember = allMembers.find(m => m.id === memberId);
-                const targetMember = allMembers.find(m => m.id === targetMemberId);
+                const sourceMember = masterPersonnel.find(m => m.id === memberId);
+                const targetMember = masterPersonnel.find(m => m.id === targetMemberId);
                 
                 if (sourceMember && targetMember) {
                     if (isCallTake) {
