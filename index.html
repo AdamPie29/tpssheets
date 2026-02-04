@@ -1896,116 +1896,42 @@
         </header>
 
     <div class="container">
-        <div class="step-indicator">
-            <div class="step active" data-step="1">
-                <div class="step-circle">1</div>
-                <span class="step-label">Platoon & Shift</span>
-            </div>
-            <div class="step" data-step="2">
-                <div class="step-circle">2</div>
-                <span class="step-label">Add Members</span>
-            </div>
-            <div class="step" data-step="3">
-                <div class="step-circle">3</div>
-                <span class="step-label">Assign Desks</span>
+        <!-- Date Selector Bar -->
+        <div class="card" style="margin-bottom: 1rem; padding: 1rem 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label class="form-label" style="margin: 0; white-space: nowrap;">Schedule Date:</label>
+                    <input type="date" id="scheduleDate" class="form-input" style="width: auto;" required>
+                </div>
+                <div id="existingScheduleIndicator" style="padding: 0.5rem 1rem; background: rgba(46, 160, 67, 0.1); border: 1px solid var(--success); border-radius: 4px; color: var(--success); display: none; font-size: 0.9rem;">
+                    ✓ Saved schedule exists for this date
+                </div>
+                <button class="btn btn-secondary" onclick="loadScheduleForCurrentDate()" style="padding: 0.5rem 1rem;">Load Saved Schedule</button>
+                <button class="btn btn-secondary" onclick="clearCurrentSchedule()" style="padding: 0.5rem 1rem;">Clear Schedule</button>
             </div>
         </div>
 
-        <!-- Page 1: Select Platoon and Shift -->
-        <div id="page1" class="page active">
-            <div class="card">
-                <h2 class="card-title">Select Platoon</h2>
-                <div class="platoon-selector">
-                    <button class="platoon-btn" onclick="selectPlatoon('A')">A</button>
-                    <button class="platoon-btn" onclick="selectPlatoon('B')">B</button>
-                    <button class="platoon-btn" onclick="selectPlatoon('C')">C</button>
-                    <button class="platoon-btn" onclick="selectPlatoon('D')">D</button>
-                    <button class="platoon-btn" onclick="selectPlatoon('E')">E</button>
-                </div>
-
-                <h2 class="card-title">Schedule Details</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Date</label>
-                        <input type="date" id="scheduleDate" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Shift</label>
-                        <select id="shiftSelect" class="form-select" required>
-                            <option value="">Select Shift</option>
-                            <option value="day">Day Shift (06:30 - 15:00)</option>
-                            <option value="afternoon">Afternoons (14:15 - 23:00)</option>
-                            <option value="night">Nights (22:45 - 07:15)</option>
-                            <option value="training">Training Day (08:00 - 16:00)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="existingScheduleIndicator" style="margin-top: 1rem; padding: 0.75rem; background: rgba(46, 160, 67, 0.1); border: 1px solid var(--success); border-radius: 4px; color: var(--success); display: none;">
-                    ✓ Saved schedule exists for this date, platoon, and shift
-                </div>
-
-                <div class="actions">
-                    <div></div>
-                    <button class="btn btn-primary btn-large" onclick="nextPage(2)">Next: Add Members</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Page 2: Add Additional Members -->
-        <div id="page2" class="page">
-            <div class="card">
-                <h2 class="card-title">Platoon Members</h2>
-                <div id="platoonMembers" class="member-list"></div>
-            </div>
-
-            <div class="card">
-                <h2 class="card-title">Add Additional Members</h2>
-                <div class="form-group">
-                    <label class="form-label">Add From Master List</label>
-                    <select id="additionalMember" class="form-select">
-                        <option value="">Select member to add...</option>
-                    </select>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Reason</label>
-                        <select id="addReason" class="form-select">
-                            <option value="callback">Callback</option>
-                            <option value="rdo">RDO</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="swapMemberGroup" style="display: none;">
-                        <label class="form-label">Replacing Member</label>
-                        <select id="swapMember" class="form-select">
-                            <option value="">Select member being replaced...</option>
-                        </select>
-                    </div>
-                </div>
-                <button class="btn btn-primary" onclick="addAdditionalMember()">Add Member</button>
-
-                <div id="addedMembers" style="margin-top: 2rem;"></div>
-            </div>
-
-            <div class="actions">
-                <button class="btn btn-secondary btn-large" onclick="prevPage(1)">Back</button>
-                <button class="btn btn-primary btn-large" onclick="nextPage(3)">Next: Assign Desks</button>
-            </div>
-        </div>
-
-        <!-- Page 3: Assign to Desks -->
-        <div id="page3" class="page">
+        <!-- Main Assignment Page -->
+        <div id="page3" class="page active">
             <div class="schedule-layout">
                 <div class="members-panel">
                     <div class="members-panel-title">
                         <span>Available Members</span>
-                        <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="autoAssign()">Auto Assign All</button>
+                    </div>
+                    <div style="padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                        <select id="platoonFilter" class="form-select" style="width: 100%;" onchange="loadAvailableMembers()">
+                            <option value="">All Platoons</option>
+                            <option value="A">Platoon A</option>
+                            <option value="B">Platoon B</option>
+                            <option value="C">Platoon C</option>
+                            <option value="D">Platoon D</option>
+                            <option value="E">Platoon E</option>
+                        </select>
                     </div>
                     <div id="availableMembers" class="members-grid"></div>
                 </div>
 
                 <div style="margin: 1.5rem 0; display: flex; gap: 1rem; align-items: center;">
-                    <button class="btn btn-secondary" onclick="prevPage(2)">Back</button>
                     <button class="btn btn-primary" onclick="saveSchedule()">Save Schedule</button>
                 </div>
 
@@ -2721,13 +2647,128 @@
             // Load all schedules for open seating
             await loadAllSchedulesFromDB();
             
-            // Check for existing schedule
+            // Set today's date
+            const today = new Date();
+            document.getElementById('scheduleDate').valueAsDate = today;
+            state.scheduleDate = today.toISOString().split('T')[0];
+            
+            // Initialize desk tables with default hours
+            initializeDeskTable();
+            initializeCallTakeTable();
+            
+            // Load available members
+            loadAvailableMembers();
+            
+            // Render reliever duties
+            renderRelieverDuties();
+            
+            // Update nav counts
+            updateNavCounts();
+            
+            // Check for existing schedule for today
             checkForExistingSchedule();
             
             // Render calendar
             renderCalendar();
             
             console.log('App initialized with database data');
+        }
+        
+        // Load saved schedule for current date
+        async function loadScheduleForCurrentDate() {
+            const date = document.getElementById('scheduleDate').value;
+            if (!date) {
+                alert('Please select a date first');
+                return;
+            }
+            
+            state.scheduleDate = date;
+            
+            // Reload from database
+            await loadAllSchedulesFromDB();
+            
+            // Find schedules for this date
+            const schedulesForDate = Object.keys(state.openSeatingData).filter(key => key.startsWith(date));
+            
+            if (schedulesForDate.length === 0) {
+                alert('No saved schedule found for this date');
+                return;
+            }
+            
+            // Clear current state
+            clearCurrentSchedule(true); // silent clear
+            
+            // Merge all schedules for this date into current state
+            schedulesForDate.forEach(key => {
+                const schedule = state.openSeatingData[key];
+                
+                // Merge dispatch assignments
+                Object.assign(state.assignments, schedule.dispatchDesks?.assignments || {});
+                Object.assign(state.deskHours, schedule.dispatchDesks?.deskHours || {});
+                Object.assign(state.breakTimes, schedule.dispatchDesks?.breakTimes || {});
+                Object.assign(state.deskStatus, schedule.dispatchDesks?.deskStatus || {});
+                
+                // Merge call take assignments
+                Object.assign(state.callTakeAssignments, schedule.callTakeDesks?.assignments || {});
+                Object.assign(state.callTakeDeskHours, schedule.callTakeDesks?.deskHours || {});
+                Object.assign(state.callTakeBreakTimes, schedule.callTakeDesks?.breakTimes || {});
+                Object.assign(state.callTakeDeskStatus, schedule.callTakeDesks?.deskStatus || {});
+                
+                // Merge reliever duties
+                if (schedule.relieverDuties && schedule.relieverDuties.length > 0) {
+                    state.relieverDuties.push(...schedule.relieverDuties);
+                }
+            });
+            
+            // Update reliever ID counter
+            if (state.relieverDuties.length > 0) {
+                relieverIdCounter = Math.max(...state.relieverDuties.map(r => r.id)) + 1;
+            }
+            
+            // Refresh UI
+            initializeDeskTable();
+            initializeCallTakeTable();
+            loadAvailableMembers();
+            renderRelieverDuties();
+            updateNavCounts();
+            
+            alert(`Loaded ${schedulesForDate.length} schedule(s) for ${date}`);
+        }
+        
+        // Clear current schedule
+        function clearCurrentSchedule(silent = false) {
+            // Reset all state
+            state.assignments = {};
+            state.deskHours = {};
+            state.breakTimes = {};
+            state.deskStatus = {};
+            state.callTakeAssignments = {};
+            state.callTakeDeskHours = {};
+            state.callTakeBreakTimes = {};
+            state.callTakeDeskStatus = {};
+            state.relieverDuties = [];
+            relieverIdCounter = 1;
+            
+            // Initialize desk statuses to true (working)
+            for (let i = 1; i <= 24; i++) {
+                const deskNum = String(i).padStart(2, '0');
+                state.deskStatus[deskNum] = true;
+            }
+            for (let i = 1; i <= 25; i++) {
+                const deskNum = `CT${String(i).padStart(2, '0')}`;
+                state.callTakeDeskStatus[deskNum] = true;
+            }
+            
+            // Refresh UI
+            initializeDeskTable();
+            initializeCallTakeTable();
+            loadAvailableMembers();
+            renderRelieverDuties();
+            updateNavCounts();
+            
+            if (!silent) {
+                alert('Schedule cleared');
+            }
         }
 
         // Sample data - In production, this would come from a database
@@ -3352,13 +3393,11 @@
             // Set today's date as default
             document.getElementById('scheduleDate').valueAsDate = new Date();
             
-            // Add event listeners for date and platoon selection to update available shifts
+            // Add event listener for date change
             document.getElementById('scheduleDate').addEventListener('change', function() {
-                updateAvailableShifts();
+                state.scheduleDate = this.value;
                 checkForExistingSchedule();
             });
-            
-            document.getElementById('shiftSelect').addEventListener('change', checkForExistingSchedule);
             
             // Listen for auth state changes
             supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -3372,20 +3411,17 @@
             });
         });
 
-        async function checkForExistingSchedule() {
+        function checkForExistingSchedule() {
             const date = document.getElementById('scheduleDate').value;
-            const shift = document.getElementById('shiftSelect').value;
-            const platoon = state.selectedPlatoon;
-            
             const indicator = document.getElementById('existingScheduleIndicator');
             
-            if (!date || !shift || !platoon) {
+            if (!date) {
                 indicator.style.display = 'none';
                 return;
             }
             
-            // Check in openSeatingData (loaded from DB)
-            const scheduleKey = `${date}_${platoon}_${shift}`;
+            // Check in openSeatingData (loaded from DB) for this date
+            const scheduleKey = `${date}_ALL_full`;
             
             if (state.openSeatingData[scheduleKey]) {
                 indicator.style.display = 'block';
@@ -3414,9 +3450,6 @@
                 page.classList.remove('active');
             });
             
-            // Hide step indicator
-            document.querySelector('.step-indicator').style.display = 'none';
-            
             // Show master personnel page
             document.getElementById('masterPersonnelPage').classList.add('active');
             
@@ -3429,12 +3462,9 @@
 
         function navigateToShiftSchedule() {
             // Hide all other pages
-            document.querySelectorAll('#page1, #page2, #page3, #masterPersonnelPage, #openSeatingPage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #openSeatingPage, #agentMapPage').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            // Hide step indicator
-            document.querySelector('.step-indicator').style.display = 'none';
             
             // Show shift schedule page
             document.getElementById('shiftSchedulePage').classList.add('active');
@@ -3448,12 +3478,9 @@
 
         async function navigateToOpenSeating() {
             // Hide all other pages
-            document.querySelectorAll('#page1, #page2, #page3, #masterPersonnelPage, #shiftSchedulePage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #agentMapPage').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            // Hide step indicator
-            document.querySelector('.step-indicator').style.display = 'none';
             
             // Show open seating page
             document.getElementById('openSeatingPage').classList.add('active');
@@ -3470,12 +3497,9 @@
 
         async function navigateToAgentMap() {
             // Hide all other pages
-            document.querySelectorAll('#page1, #page2, #page3, #masterPersonnelPage, #shiftSchedulePage, #openSeatingPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #openSeatingPage').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            // Hide step indicator
-            document.querySelector('.step-indicator').style.display = 'none';
             
             // Show agent map page
             document.getElementById('agentMapPage').classList.add('active');
@@ -3496,11 +3520,8 @@
                 page.classList.remove('active');
             });
             
-            // Show step indicator
-            document.querySelector('.step-indicator').style.display = 'flex';
-            
-            // Return to the current page they were on
-            showPage(state.currentPage);
+            // Show main assignment page
+            document.getElementById('page3').classList.add('active');
             
             // Update URL
             window.history.pushState({}, '', '?');
@@ -3878,10 +3899,19 @@
 
         function loadAvailableMembers() {
             const container = document.getElementById('availableMembers');
-            const allMembers = [...state.platoonMembers, ...state.additionalMembers];
+            const platoonFilter = document.getElementById('platoonFilter');
+            const selectedPlatoon = platoonFilter ? platoonFilter.value : '';
+            
+            // Get all members from master personnel, filtered by platoon if selected
+            let availableMembers = masterPersonnel.filter(member => {
+                if (selectedPlatoon && member.platoon !== selectedPlatoon) {
+                    return false;
+                }
+                return true;
+            });
             
             // Sort members by name
-            const sortedMembers = [...allMembers].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
             
             const tagClasses = {
                 'Calltaker': 'tag-calltaker',
@@ -3898,9 +3928,6 @@
                 const isAssignedReliever = state.relieverDuties.some(r => r.memberId === member.id);
                 const isAssigned = isAssignedDispatch || isAssignedCallTake || isAssignedReliever;
                 
-                // Check if this is an additional member with a reason
-                const reasonSuffix = member.reason === 'callback' ? ' (CB)' : member.reason === 'rdo' ? ' (RDO)' : '';
-                
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
                         `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">${tag}</span>`
@@ -3912,8 +3939,8 @@
                          draggable="${!isAssigned}" 
                          data-id="${member.id}"
                          style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
-                        <div style="font-weight: 600; font-size: 0.95rem;">${member.name}${reasonSuffix}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace;">Badge: ${member.badge}</div>
+                        <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Platoon ${member.platoon} • Badge: ${member.badge}</div>
                         ${tagsHTML ? `<div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">${tagsHTML}</div>` : '<div style="font-size: 0.75rem; color: var(--text-secondary);">No certifications</div>'}
                     </div>
                 `;
@@ -3959,29 +3986,33 @@
 
         function initializeDeskTable() {
             const tbody = document.getElementById('deskTableBody');
-            const times = shiftTimes[state.selectedShift];
             
-            if (!times) {
-                console.error('Invalid shift selected:', state.selectedShift);
-                return;
-            }
+            // Default hours if no shift selected
+            const defaultStart = '06:30';
+            const defaultEnd = '15:00';
             
             tbody.innerHTML = '';
             
             for (let i = 1; i <= 24; i++) {
                 const deskNum = i.toString().padStart(2, '0');
-                const breaks = generateBreakTimes(state.selectedShift, deskNum);
-                
-                // Initialize break times in state if not exists
-                if (!state.breakTimes[deskNum]) {
-                    state.breakTimes[deskNum] = breaks;
-                }
                 
                 // Initialize desk hours in state if not exists
                 if (!state.deskHours[deskNum]) {
                     state.deskHours[deskNum] = {
-                        start: times.start,
-                        end: times.end
+                        start: defaultStart,
+                        end: defaultEnd
+                    };
+                }
+                
+                // Initialize break times in state if not exists
+                if (!state.breakTimes[deskNum]) {
+                    state.breakTimes[deskNum] = {
+                        break1: '',
+                        lunch: '',
+                        tibOption: 'na',
+                        plus15: '',
+                        plus15Enabled: false,
+                        break2: ''
                     };
                 }
                 
@@ -4092,29 +4123,33 @@
 
         function initializeCallTakeTable() {
             const tbody = document.getElementById('callTakeTableBody');
-            const times = shiftTimes[state.selectedShift];
             
-            if (!times) {
-                console.error('Invalid shift selected:', state.selectedShift);
-                return;
-            }
+            // Default hours if no shift selected
+            const defaultStart = '06:30';
+            const defaultEnd = '15:00';
             
             tbody.innerHTML = '';
             
             callTakeLabels.forEach((deskLabel, index) => {
                 const deskNum = `CT${String(index + 1).padStart(2, '0')}`;
-                const breaks = generateBreakTimes(state.selectedShift, deskNum);
-                
-                // Initialize break times in state if not exists
-                if (!state.callTakeBreakTimes[deskNum]) {
-                    state.callTakeBreakTimes[deskNum] = breaks;
-                }
                 
                 // Initialize desk hours in state if not exists
                 if (!state.callTakeDeskHours[deskNum]) {
                     state.callTakeDeskHours[deskNum] = {
-                        start: times.start,
-                        end: times.end
+                        start: defaultStart,
+                        end: defaultEnd
+                    };
+                }
+                
+                // Initialize break times in state if not exists
+                if (!state.callTakeBreakTimes[deskNum]) {
+                    state.callTakeBreakTimes[deskNum] = {
+                        break1: '',
+                        lunch: '',
+                        tibOption: 'na',
+                        plus15: '',
+                        plus15Enabled: false,
+                        break2: ''
                     };
                 }
                 
@@ -4617,9 +4652,8 @@
         }
 
         function assignMember(memberId, deskNum) {
-            // Get the member details
-            const allMembers = [...state.platoonMembers, ...state.additionalMembers];
-            const member = allMembers.find(m => m.id === memberId);
+            // Get the member details from master personnel
+            const member = masterPersonnel.find(m => m.id === memberId);
             
             if (!member) return;
             
@@ -4636,7 +4670,7 @@
                 return;
             }
             
-            // Check if member is already assigned elsewhere
+            // Check if member is already assigned elsewhere (dispatch desks)
             Object.keys(state.assignments).forEach(desk => {
                 if (state.assignments[desk] === memberId) {
                     delete state.assignments[desk];
@@ -4647,6 +4681,22 @@
                         oldDropzone.innerHTML = 'Drop member here';
                     }
                     // Clear row styling
+                    const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
+                    if (oldRow) {
+                        oldRow.classList.remove('filled');
+                    }
+                }
+            });
+            
+            // Also check call take desks
+            Object.keys(state.callTakeAssignments).forEach(desk => {
+                if (state.callTakeAssignments[desk] === memberId) {
+                    delete state.callTakeAssignments[desk];
+                    const oldDropzone = document.querySelector(`.member-dropzone[data-desk="${desk}"][data-type="calltake"]`);
+                    if (oldDropzone) {
+                        oldDropzone.classList.remove('filled');
+                        oldDropzone.innerHTML = 'Drop member here';
+                    }
                     const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
                     if (oldRow) {
                         oldRow.classList.remove('filled');
@@ -4765,10 +4815,18 @@
         }
 
         async function saveSchedule() {
+            const date = document.getElementById('scheduleDate').value;
+            if (!date) {
+                alert('Please select a date first');
+                return;
+            }
+            
+            state.scheduleDate = date;
+            
             const schedule = {
-                platoon: state.selectedPlatoon,
+                platoon: 'ALL', // Single schedule for entire day
                 date: state.scheduleDate,
-                shift: state.selectedShift,
+                shift: 'full', // Full 24-hour schedule
                 dispatchDesks: {
                     assignments: { ...state.assignments },
                     deskHours: { ...state.deskHours },
@@ -4782,11 +4840,11 @@
                     breakTimes: { ...state.callTakeBreakTimes }
                 },
                 relieverDuties: [...state.relieverDuties],
-                additionalMembers: [...state.additionalMembers]
+                additionalMembers: []
             };
             
             // Remove old entry from openSeatingData first
-            const scheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
+            const scheduleKey = `${state.scheduleDate}_ALL_full`;
             delete state.openSeatingData[scheduleKey];
             
             // Save to database (upsert will overwrite existing)
@@ -4796,13 +4854,16 @@
                 // Reload all schedules from database to ensure sync
                 await loadAllSchedulesFromDB();
                 
+                // Update indicator
+                checkForExistingSchedule();
+                
                 const dispatchAssignedCount = Object.keys(state.assignments).length;
                 const callTakeAssignedCount = Object.keys(state.callTakeAssignments).length;
                 const relieverCount = state.relieverDuties.length;
                 const brokenDispatchDesks = Object.keys(state.deskStatus).filter(desk => !state.deskStatus[desk]).length;
                 const brokenCallTakeDesks = Object.keys(state.callTakeDeskStatus).filter(desk => !state.callTakeDeskStatus[desk]).length;
                 
-                alert(`Schedule saved successfully!\n\nPlatoon: ${state.selectedPlatoon}\nDate: ${state.scheduleDate}\nShift: ${state.selectedShift}\n\nDispatch Desks: ${dispatchAssignedCount} filled (${brokenDispatchDesks} broken)\nCall Take Desks: ${callTakeAssignedCount} filled (${brokenCallTakeDesks} broken)\nRelievers: ${relieverCount}`);
+                alert(`Schedule saved successfully!\n\nDate: ${state.scheduleDate}\n\nDispatch Desks: ${dispatchAssignedCount} filled (${brokenDispatchDesks} broken)\nCall Take Desks: ${callTakeAssignedCount} filled (${brokenCallTakeDesks} broken)\nRelievers: ${relieverCount}`);
             } else {
                 alert('Error saving schedule. Please try again.');
             }
