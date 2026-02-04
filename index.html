@@ -1451,17 +1451,6 @@
             color: var(--accent-light);
         }
 
-        .reliever-member-select {
-            background: var(--bg-secondary);
-            border: 2px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
-            color: var(--text-primary);
-            font-family: 'Barlow Semi Condensed', sans-serif;
-            font-size: 1rem;
-            min-width: 250px;
-        }
-
         .reliever-schedule-grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
@@ -5728,6 +5717,125 @@
                 loadAvailableMembers();
             }
         }
+        
+        // Show reliever autocomplete dropdown
+        function showRelieverAutocomplete(input, relieverId) {
+            // Close any other open dropdowns
+            document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
+            
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-reliever="${relieverId}"]`);
+            if (dropdown) {
+                buildRelieverAutocompleteList(dropdown, '', relieverId);
+                dropdown.classList.add('show');
+            }
+        }
+        
+        // Filter reliever autocomplete based on input
+        function filterRelieverAutocomplete(input, relieverId) {
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-reliever="${relieverId}"]`);
+            if (dropdown) {
+                buildRelieverAutocompleteList(dropdown, input.value, relieverId);
+                dropdown.classList.add('show');
+            }
+        }
+        
+        // Build reliever autocomplete list
+        function buildRelieverAutocompleteList(dropdown, filter, relieverId) {
+            // Get dispatcher-certified members
+            let availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
+            
+            // Sort by name
+            availableMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Filter by search term
+            if (filter) {
+                const searchTerm = filter.toLowerCase();
+                availableMembers = availableMembers.filter(m => 
+                    m.name.toLowerCase().startsWith(searchTerm) || 
+                    m.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            const tagClasses = {
+                'Calltaker': 'tag-calltaker',
+                'Dispatcher': 'tag-dispatcher',
+                'ODT': 'tag-odt',
+                'TRNG': 'tag-trng',
+                'TCL': 'tag-tcl',
+                'ROC': 'tag-roc'
+            };
+            
+            // Build dropdown HTML
+            let html = '';
+            availableMembers.forEach(member => {
+                const isAssignedDesk = Object.values(state.assignments).includes(member.id) || 
+                                   Object.values(state.callTakeAssignments).includes(member.id);
+                const isAssignedReliever = state.relieverDuties.some(r => r.memberId === member.id && r.id !== relieverId);
+                const isAssigned = isAssignedDesk || isAssignedReliever;
+                
+                const tagsHTML = member.tags && member.tags.length > 0 
+                    ? member.tags.map(tag => 
+                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;">${tag}</span>`
+                      ).join('')
+                    : '';
+                
+                html += `
+                    <div class="autocomplete-item ${isAssigned ? 'assigned' : ''}" 
+                         onclick="selectRelieverAutocompleteItem(${member.id}, ${relieverId})">
+                        <div class="member-name">${member.name}</div>
+                        <div class="member-info">Platoon ${member.platoon} • Badge: ${member.badge}${isAssigned ? ' • (assigned)' : ''}</div>
+                        ${tagsHTML ? `<div class="member-tags">${tagsHTML}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            if (availableMembers.length === 0) {
+                html = '<div class="autocomplete-item" style="color: var(--text-secondary); cursor: default;">No matching dispatchers</div>';
+            }
+            
+            dropdown.innerHTML = html;
+        }
+        
+        // Select item from reliever autocomplete
+        function selectRelieverAutocompleteItem(memberId, relieverId) {
+            // Hide dropdown
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-reliever="${relieverId}"]`);
+            if (dropdown) {
+                dropdown.classList.remove('show');
+            }
+            
+            // Update the reliever
+            updateRelieverMember(relieverId, memberId);
+            
+            // Update input with member name
+            const member = masterPersonnel.find(m => m.id === memberId);
+            const input = document.querySelector(`.member-autocomplete[data-reliever="${relieverId}"]`);
+            if (input && member) {
+                input.value = member.name;
+                input.classList.add('has-assignment');
+                input.parentElement.classList.add('has-value');
+            }
+        }
+        
+        // Clear reliever assignment
+        function clearRelieverAssignment(relieverId) {
+            // Clear the input
+            const input = document.querySelector(`.member-autocomplete[data-reliever="${relieverId}"]`);
+            if (input) {
+                input.value = '';
+                input.classList.remove('has-assignment');
+                input.parentElement.classList.remove('has-value');
+            }
+            
+            // Clear the reliever member
+            const reliever = state.relieverDuties.find(r => r.id === relieverId);
+            if (reliever) {
+                reliever.memberId = null;
+            }
+            
+            // Refresh available members
+            loadAvailableMembers();
+        }
 
         function updateRelieverSchedule(relieverId, timeSlot, value) {
             const reliever = state.relieverDuties.find(r => r.id === relieverId);
@@ -5794,6 +5902,10 @@
                     `<option value="${member.id}" ${reliever.memberId === member.id ? 'selected' : ''}>${member.name}</option>`
                 ).join('');
                 
+                // Get assigned member name if exists
+                const assignedMember = reliever.memberId ? masterPersonnel.find(m => m.id === reliever.memberId) : null;
+                const assignedMemberName = assignedMember ? assignedMember.name : '';
+                
                 return `
                     <div class="reliever-duty-card">
                         <div class="reliever-duty-header">
@@ -5801,10 +5913,16 @@
                             <div style="display: flex; gap: 1rem; align-items: center;">
                                 <div>
                                     <label style="margin-right: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Assign Member:</label>
-                                    <select class="reliever-member-select" onchange="updateRelieverMember(${reliever.id}, this.value)">
-                                        <option value="">Select Dispatcher</option>
-                                        ${memberOptions}
-                                    </select>
+                                    <div class="member-autocomplete-wrapper ${assignedMemberName ? 'has-value' : ''}" data-reliever="${reliever.id}" style="display: inline-block; width: 220px; vertical-align: middle;">
+                                        <input type="text" class="member-autocomplete ${assignedMemberName ? 'has-assignment' : ''}" 
+                                               data-reliever="${reliever.id}"
+                                               placeholder="Type surname..." 
+                                               value="${assignedMemberName}"
+                                               onfocus="showRelieverAutocomplete(this, ${reliever.id})"
+                                               oninput="filterRelieverAutocomplete(this, ${reliever.id})">
+                                        <button class="clear-assignment-btn" onclick="clearRelieverAssignment(${reliever.id})" title="Clear assignment">×</button>
+                                        <div class="autocomplete-dropdown" data-reliever="${reliever.id}"></div>
+                                    </div>
                                 </div>
                                 <button class="remove-reliever-btn" onclick="removeRelieverDuty(${reliever.id})">Remove</button>
                             </div>
