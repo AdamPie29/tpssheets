@@ -1060,6 +1060,15 @@
             transform: scale(1.1);
         }
 
+        .desk-instance-row {
+            background: rgba(217, 79, 42, 0.1) !important;
+            border-left: 3px solid var(--accent);
+        }
+
+        .desk-instance-row:hover {
+            background: rgba(217, 79, 42, 0.15) !important;
+        }
+
         /* Shift Schedule Calendar Styles */
         .calendar-controls {
             display: flex;
@@ -2716,11 +2725,21 @@
                 Object.assign(state.breakTimes, schedule.dispatchDesks?.breakTimes || {});
                 Object.assign(state.deskStatus, schedule.dispatchDesks?.deskStatus || {});
                 
+                // Merge dispatch desk instances
+                if (schedule.dispatchDesks?.instances) {
+                    Object.assign(state.deskInstances, schedule.dispatchDesks.instances);
+                }
+                
                 // Merge call take assignments
                 Object.assign(state.callTakeAssignments, schedule.callTakeDesks?.assignments || {});
                 Object.assign(state.callTakeDeskHours, schedule.callTakeDesks?.deskHours || {});
                 Object.assign(state.callTakeBreakTimes, schedule.callTakeDesks?.breakTimes || {});
                 Object.assign(state.callTakeDeskStatus, schedule.callTakeDesks?.deskStatus || {});
+                
+                // Merge call take desk instances
+                if (schedule.callTakeDesks?.instances) {
+                    Object.assign(state.callTakeDeskInstances, schedule.callTakeDesks.instances);
+                }
                 
                 // Merge reliever duties
                 if (schedule.relieverDuties && schedule.relieverDuties.length > 0) {
@@ -2732,6 +2751,18 @@
             if (state.relieverDuties.length > 0) {
                 relieverIdCounter = Math.max(...state.relieverDuties.map(r => r.id)) + 1;
             }
+            
+            // Update desk instance counter
+            let maxInstanceId = 0;
+            Object.values(state.deskInstances).flat().forEach(inst => {
+                const idNum = parseInt(inst.id.split('-')[1]) || 0;
+                if (idNum > maxInstanceId) maxInstanceId = idNum;
+            });
+            Object.values(state.callTakeDeskInstances).flat().forEach(inst => {
+                const idNum = parseInt(inst.id.split('-')[1]) || 0;
+                if (idNum > maxInstanceId) maxInstanceId = idNum;
+            });
+            deskInstanceCounter = maxInstanceId + 1;
             
             // Refresh UI
             initializeDeskTable();
@@ -2750,12 +2781,15 @@
             state.deskHours = {};
             state.breakTimes = {};
             state.deskStatus = {};
+            state.deskInstances = {};
             state.callTakeAssignments = {};
             state.callTakeDeskHours = {};
             state.callTakeBreakTimes = {};
             state.callTakeDeskStatus = {};
+            state.callTakeDeskInstances = {};
             state.relieverDuties = [];
             relieverIdCounter = 1;
+            deskInstanceCounter = 1;
             
             // Initialize desk statuses to true (working)
             for (let i = 1; i <= 24; i++) {
@@ -2872,10 +2906,12 @@
             breakTimes: {},
             deskHours: {},
             deskStatus: {}, // Track desk working status: true = working, false = broken
+            deskInstances: {}, // Track multiple instances of same desk (e.g., 01: [{id: '01-1', ...}, {id: '01-2', ...}])
             callTakeAssignments: {},
             callTakeBreakTimes: {},
             callTakeDeskHours: {},
             callTakeDeskStatus: {},
+            callTakeDeskInstances: {}, // Track multiple instances of same call take desk
             relieverDuties: [], // Array of reliever duty objects
             memberTagFilters: [], // For future filtering functionality
             calendarMonth: 0, // January 2026
@@ -2885,6 +2921,7 @@
         };
 
         let relieverIdCounter = 1;
+        let deskInstanceCounter = 1; // Counter for unique desk instance IDs
 
         // Minimum call taker requirements for each 15-minute interval
         const minCallTakerRequirements = {
@@ -3854,8 +3891,12 @@
         }
 
         function assignCallTakeMember(memberId, deskNum) {
-            // Check if desk is broken
-            if (state.callTakeDeskStatus[deskNum] === false) {
+            // Check if this is an instance desk (contains a dash like "CT01-1")
+            const isInstance = deskNum.includes('-');
+            const baseDeskNum = isInstance ? deskNum.split('-')[0] : deskNum;
+            
+            // Check if desk is broken (only for base desks, not instances)
+            if (!isInstance && state.callTakeDeskStatus[deskNum] === false) {
                 const index = parseInt(deskNum.substring(2)) - 1;
                 const deskLabel = callTakeLabels[index];
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
@@ -3897,9 +3938,16 @@
             // Assign to new desk
             state.callTakeAssignments[deskNum] = memberId;
             
+            // If it's an instance, also update the instance object
+            if (isInstance && state.callTakeDeskInstances[baseDeskNum]) {
+                const instance = state.callTakeDeskInstances[baseDeskNum].find(i => i.id === deskNum);
+                if (instance) {
+                    instance.memberId = memberId;
+                }
+            }
+            
             // Update display
-            const allMembers = [...state.platoonMembers, ...state.additionalMembers];
-            const member = allMembers.find(m => m.id === memberId);
+            const member = masterPersonnel.find(m => m.id === memberId);
             
             if (member) {
                 updateCallTakeDeskDisplay(deskNum, member);
@@ -4064,7 +4112,10 @@
                     <td class="position-cell">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                             <span id="deskLabel-${deskNum}">${deskLabel}</span>
-                            <button class="edit-desk-btn" onclick="editDeskName('${deskNum}')" title="Edit Desk Name">✎</button>
+                            <div style="display: flex; gap: 0.25rem;">
+                                <button class="edit-desk-btn" onclick="editDeskName('${deskNum}')" title="Edit Desk Name">✎</button>
+                                <button class="edit-desk-btn" onclick="addDeskInstance('${deskNum}', 'dispatch')" title="Add Another Instance" style="font-weight: bold; font-size: 1.1rem;">+</button>
+                            </div>
                         </div>
                     </td>
                     <td class="member-cell">
@@ -4074,10 +4125,10 @@
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="time" class="time-input" step="60" value="${state.deskHours[deskNum]?.start || times.start}" 
+                            <input type="time" class="time-input" step="60" value="${state.deskHours[deskNum]?.start || defaultStart}" 
                                    onchange="updateDeskHours('${deskNum}', 'start', this.value)">
                             <span style="color: var(--text-secondary);">-</span>
-                            <input type="time" class="time-input" step="60" value="${state.deskHours[deskNum]?.end || times.end}" 
+                            <input type="time" class="time-input" step="60" value="${state.deskHours[deskNum]?.end || defaultEnd}" 
                                    onchange="updateDeskHours('${deskNum}', 'end', this.value)">
                         </div>
                     </td>
@@ -4132,12 +4183,20 @@
                 }
                 
                 tbody.appendChild(row);
+                
+                // Render any additional instances for this desk
+                if (state.deskInstances[deskNum]) {
+                    state.deskInstances[deskNum].forEach(instance => {
+                        const instanceRow = createDeskInstanceRow(deskNum, instance, 'dispatch');
+                        tbody.appendChild(instanceRow);
+                    });
+                }
             }
             
             // Restore existing assignments
             Object.keys(state.assignments).forEach(deskNum => {
                 const memberId = state.assignments[deskNum];
-                const member = [...state.platoonMembers, ...state.additionalMembers].find(m => m.id === memberId);
+                const member = masterPersonnel.find(m => m.id === memberId);
                 if (member) {
                     updateDeskDisplay(deskNum, member);
                 }
@@ -4145,6 +4204,213 @@
             
             // Add drop zone listeners
             addDropZoneListeners();
+        }
+        
+        // Create a desk instance row
+        function createDeskInstanceRow(baseDeskNum, instance, deskType) {
+            const row = document.createElement('tr');
+            row.dataset.desk = instance.id;
+            row.dataset.baseDeck = baseDeskNum;
+            row.dataset.isInstance = 'true';
+            row.classList.add('desk-instance-row');
+            
+            const deskLabel = deskType === 'dispatch' 
+                ? (deskLabels[baseDeskNum] || `PD${baseDeskNum}`)
+                : callTakeLabels[parseInt(baseDeskNum.substring(2)) - 1];
+            
+            row.innerHTML = `
+                <td style="text-align: center;">
+                    <button class="desk-status-btn broken" 
+                            onclick="removeDeskInstance('${baseDeskNum}', '${instance.id}', '${deskType}')"
+                            title="Remove Instance">
+                        ✕
+                    </button>
+                </td>
+                <td class="position-cell">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                        <span style="color: var(--accent);">${deskLabel} <span style="font-size: 0.8rem; opacity: 0.7;">(#${instance.instanceNum})</span></span>
+                    </div>
+                </td>
+                <td class="member-cell">
+                    <div class="member-dropzone" data-desk="${instance.id}" ${deskType === 'calltake' ? 'data-type="calltake"' : ''}>
+                        Drop member here
+                    </div>
+                </td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="time" class="time-input" step="60" value="${instance.hours?.start || '06:30'}" 
+                               onchange="updateInstanceHours('${instance.id}', 'start', this.value, '${deskType}')">
+                        <span style="color: var(--text-secondary);">-</span>
+                        <input type="time" class="time-input" step="60" value="${instance.hours?.end || '15:00'}" 
+                               onchange="updateInstanceHours('${instance.id}', 'end', this.value, '${deskType}')">
+                    </div>
+                </td>
+                <td>
+                    <input type="time" class="time-input" step="60" value="${instance.breakTimes?.break1 || ''}" 
+                           onchange="updateInstanceBreakTime('${instance.id}', 'break1', this.value, '${deskType}')">
+                </td>
+                <td>
+                    <input type="time" class="time-input" step="60" value="${instance.breakTimes?.lunch || ''}" 
+                           onchange="updateInstanceBreakTime('${instance.id}', 'lunch', this.value, '${deskType}')">
+                </td>
+                <td>
+                    <select class="form-select" style="width: 110px; padding: 0.5rem; font-size: 0.85rem;" 
+                            onchange="updateInstanceTIB('${instance.id}', this.value, '${deskType}')">
+                        <option value="na" ${instance.breakTimes?.tibOption === 'na' || !instance.breakTimes?.tibOption ? 'selected' : ''}>N/A</option>
+                        <option value="tib" ${instance.breakTimes?.tibOption === 'tib' ? 'selected' : ''}>TIB</option>
+                        <option value="nl-start" ${instance.breakTimes?.tibOption === 'nl-start' ? 'selected' : ''}>NL @ Start</option>
+                        <option value="nl-end" ${instance.breakTimes?.tibOption === 'nl-end' ? 'selected' : ''}>NL @ End</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select" style="width: 80px; padding: 0.5rem; font-size: 0.9rem;" 
+                            onchange="updateInstancePlus15('${instance.id}', this.value, '${deskType}')">
+                        <option value="no">No</option>
+                        <option value="yes" ${instance.breakTimes?.plus15Enabled ? 'selected' : ''}>Yes</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="time" class="time-input" step="60" value="${instance.breakTimes?.break2 || ''}" 
+                           onchange="updateInstanceBreakTime('${instance.id}', 'break2', this.value, '${deskType}')">
+                </td>
+                <td>
+                    <textarea class="notes-input" placeholder="Add notes..." 
+                              onchange="updateInstanceNotes('${instance.id}', this.value, '${deskType}')">${instance.notes || ''}</textarea>
+                </td>
+            `;
+            
+            return row;
+        }
+        
+        // Add a new desk instance
+        function addDeskInstance(baseDeskNum, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            if (!instancesState[baseDeskNum]) {
+                instancesState[baseDeskNum] = [];
+            }
+            
+            // Find the next instance number
+            const instanceNum = instancesState[baseDeskNum].length + 2; // +2 because original is #1
+            const instanceId = `${baseDeskNum}-${deskInstanceCounter++}`;
+            
+            const newInstance = {
+                id: instanceId,
+                baseDeskNum: baseDeskNum,
+                instanceNum: instanceNum,
+                memberId: null,
+                hours: { start: '06:30', end: '15:00' },
+                breakTimes: { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
+                notes: ''
+            };
+            
+            instancesState[baseDeskNum].push(newInstance);
+            
+            // Re-render the appropriate table
+            if (deskType === 'dispatch') {
+                initializeDeskTable();
+            } else {
+                initializeCallTakeTable();
+            }
+            
+            loadAvailableMembers();
+        }
+        
+        // Remove a desk instance
+        function removeDeskInstance(baseDeskNum, instanceId, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            const assignmentsState = deskType === 'dispatch' ? state.assignments : state.callTakeAssignments;
+            
+            if (instancesState[baseDeskNum]) {
+                instancesState[baseDeskNum] = instancesState[baseDeskNum].filter(i => i.id !== instanceId);
+                
+                // Remove any assignment for this instance
+                delete assignmentsState[instanceId];
+                
+                // Re-number remaining instances
+                instancesState[baseDeskNum].forEach((inst, idx) => {
+                    inst.instanceNum = idx + 2;
+                });
+            }
+            
+            // Re-render the appropriate table
+            if (deskType === 'dispatch') {
+                initializeDeskTable();
+            } else {
+                initializeCallTakeTable();
+            }
+            
+            loadAvailableMembers();
+            updateNavCounts();
+        }
+        
+        // Update instance hours
+        function updateInstanceHours(instanceId, timeType, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    if (!instance.hours) instance.hours = {};
+                    instance.hours[timeType] = value;
+                    break;
+                }
+            }
+        }
+        
+        // Update instance break time
+        function updateInstanceBreakTime(instanceId, breakType, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    if (!instance.breakTimes) instance.breakTimes = {};
+                    instance.breakTimes[breakType] = value;
+                    break;
+                }
+            }
+        }
+        
+        // Update instance TIB
+        function updateInstanceTIB(instanceId, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    if (!instance.breakTimes) instance.breakTimes = {};
+                    instance.breakTimes.tibOption = value;
+                    break;
+                }
+            }
+        }
+        
+        // Update instance +15
+        function updateInstancePlus15(instanceId, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    if (!instance.breakTimes) instance.breakTimes = {};
+                    instance.breakTimes.plus15Enabled = value === 'yes';
+                    break;
+                }
+            }
+        }
+        
+        // Update instance notes
+        function updateInstanceNotes(instanceId, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    instance.notes = value;
+                    break;
+                }
+            }
         }
 
         function initializeCallTakeTable() {
@@ -4200,7 +4466,10 @@
                     <td class="position-cell">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                             <span id="callTakeDeskLabel-${deskNum}">${deskLabel}</span>
-                            <button class="edit-desk-btn" onclick="editCallTakeDeskName('${deskNum}', ${index})" title="Edit Desk Name">✎</button>
+                            <div style="display: flex; gap: 0.25rem;">
+                                <button class="edit-desk-btn" onclick="editCallTakeDeskName('${deskNum}', ${index})" title="Edit Desk Name">✎</button>
+                                <button class="edit-desk-btn" onclick="addDeskInstance('${deskNum}', 'calltake')" title="Add Another Instance" style="font-weight: bold; font-size: 1.1rem;">+</button>
+                            </div>
                         </div>
                     </td>
                     <td class="member-cell">
@@ -4210,10 +4479,10 @@
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="time" class="time-input" step="60" value="${state.callTakeDeskHours[deskNum]?.start || times.start}" 
+                            <input type="time" class="time-input" step="60" value="${state.callTakeDeskHours[deskNum]?.start || defaultStart}" 
                                    onchange="updateCallTakeDeskHours('${deskNum}', 'start', this.value)">
                             <span style="color: var(--text-secondary);">-</span>
-                            <input type="time" class="time-input" step="60" value="${state.callTakeDeskHours[deskNum]?.end || times.end}" 
+                            <input type="time" class="time-input" step="60" value="${state.callTakeDeskHours[deskNum]?.end || defaultEnd}" 
                                    onchange="updateCallTakeDeskHours('${deskNum}', 'end', this.value)">
                         </div>
                     </td>
@@ -4268,12 +4537,20 @@
                 }
                 
                 tbody.appendChild(row);
+                
+                // Render any additional instances for this desk
+                if (state.callTakeDeskInstances[deskNum]) {
+                    state.callTakeDeskInstances[deskNum].forEach(instance => {
+                        const instanceRow = createDeskInstanceRow(deskNum, instance, 'calltake');
+                        tbody.appendChild(instanceRow);
+                    });
+                }
             });
             
             // Restore existing assignments
             Object.keys(state.callTakeAssignments).forEach(deskNum => {
                 const memberId = state.callTakeAssignments[deskNum];
-                const member = [...state.platoonMembers, ...state.additionalMembers].find(m => m.id === memberId);
+                const member = masterPersonnel.find(m => m.id === memberId);
                 if (member) {
                     updateCallTakeDeskDisplay(deskNum, member);
                 }
@@ -4683,14 +4960,18 @@
             
             if (!member) return;
             
+            // Check if this is an instance desk (contains a dash like "01-1")
+            const isInstance = deskNum.includes('-');
+            const baseDeskNum = isInstance ? deskNum.split('-')[0] : deskNum;
+            
             // Check if member has Dispatcher tag
             if (!member.tags || !member.tags.includes('Dispatcher')) {
                 alert(`Cannot assign ${member.name} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
                 return;
             }
             
-            // Check if desk is broken
-            if (state.deskStatus[deskNum] === false) {
+            // Check if desk is broken (only for base desks, not instances)
+            if (!isInstance && state.deskStatus[deskNum] === false) {
                 const deskLabel = deskLabels[deskNum] || `PD${deskNum}`;
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
                 return;
@@ -4731,6 +5012,14 @@
             });
             
             state.assignments[deskNum] = memberId;
+            
+            // If it's an instance, also update the instance object
+            if (isInstance && state.deskInstances[baseDeskNum]) {
+                const instance = state.deskInstances[baseDeskNum].find(i => i.id === deskNum);
+                if (instance) {
+                    instance.memberId = memberId;
+                }
+            }
             
             // Update desk display
             updateDeskDisplay(deskNum, member);
@@ -4857,13 +5146,15 @@
                     assignments: { ...state.assignments },
                     deskHours: { ...state.deskHours },
                     deskStatus: { ...state.deskStatus },
-                    breakTimes: { ...state.breakTimes }
+                    breakTimes: { ...state.breakTimes },
+                    instances: JSON.parse(JSON.stringify(state.deskInstances)) // Deep copy
                 },
                 callTakeDesks: {
                     assignments: { ...state.callTakeAssignments },
                     deskHours: { ...state.callTakeDeskHours },
                     deskStatus: { ...state.callTakeDeskStatus },
-                    breakTimes: { ...state.callTakeBreakTimes }
+                    breakTimes: { ...state.callTakeBreakTimes },
+                    instances: JSON.parse(JSON.stringify(state.callTakeDeskInstances)) // Deep copy
                 },
                 relieverDuties: [...state.relieverDuties],
                 additionalMembers: []
@@ -6026,6 +6317,74 @@
                             }
                         }
                     }
+                }
+                
+                // Check desk instances for this schedule
+                const instances = deskType === 'dispatch'
+                    ? (schedule.dispatchDesks.instances || {})
+                    : (schedule.callTakeDesks.instances || {});
+                
+                // Check instances for this base desk
+                if (instances[deskNum]) {
+                    instances[deskNum].forEach(instance => {
+                        if (!instance.memberId) return;
+                        
+                        const instHours = instance.hours;
+                        const instBreaks = instance.breakTimes;
+                        
+                        if (instHours && instHours.start && instHours.end) {
+                            const checkTime = hour * 60 + minute;
+                            const [startHour, startMin] = instHours.start.split(':').map(Number);
+                            const [endHour, endMin] = instHours.end.split(':').map(Number);
+                            let startTime = startHour * 60 + startMin;
+                            let endTime = endHour * 60 + endMin;
+                            
+                            let adjustedCheckTime = checkTime;
+                            if (endTime < startTime) {
+                                endTime += 24 * 60;
+                                if (adjustedCheckTime < startTime) {
+                                    adjustedCheckTime += 24 * 60;
+                                }
+                            }
+                            
+                            if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
+                                let onBreak = false;
+                                
+                                if (instBreaks) {
+                                    if (instBreaks.break1) {
+                                        const [b1Hour, b1Min] = instBreaks.break1.split(':').map(Number);
+                                        const break1Start = b1Hour * 60 + b1Min;
+                                        const break1End = break1Start + 15;
+                                        if (checkTime >= break1Start && checkTime < break1End) onBreak = true;
+                                    }
+                                    if (instBreaks.lunch && instBreaks.tibOption === 'na') {
+                                        const [lunchHour, lunchMin] = instBreaks.lunch.split(':').map(Number);
+                                        const lunchStart = lunchHour * 60 + lunchMin;
+                                        const lunchDuration = instBreaks.plus15Enabled ? 60 : 45;
+                                        const lunchEnd = lunchStart + lunchDuration;
+                                        if (checkTime >= lunchStart && checkTime < lunchEnd) onBreak = true;
+                                    }
+                                    if (instBreaks.break2) {
+                                        const [b2Hour, b2Min] = instBreaks.break2.split(':').map(Number);
+                                        const break2Start = b2Hour * 60 + b2Min;
+                                        const break2End = break2Start + 15;
+                                        if (checkTime >= break2Start && checkTime < break2End) onBreak = true;
+                                    }
+                                }
+                                
+                                if (!onBreak) {
+                                    count++;
+                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
+                                    if (member) {
+                                        const nameParts = member.name.split(',');
+                                        const lastName = nameParts[0].trim();
+                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                        names.push(`${lastName}, ${firstInitial}`);
+                                    }
+                                }
+                            }
+                        }
+                    });
                 }
                 
                 // Check reliever duties for this schedule
