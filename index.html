@@ -785,7 +785,6 @@
             padding: 0.75rem;
             font-weight: 600;
             text-align: left;
-            cursor: move;
             transition: all 0.2s ease;
             min-height: 100px;
             display: flex;
@@ -794,13 +793,10 @@
 
         .member-chip:hover {
             border-color: var(--accent);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(217, 79, 42, 0.3);
         }
 
         .member-chip.assigned {
             opacity: 0.4;
-            cursor: not-allowed;
         }
 
         .desk-table-container {
@@ -868,9 +864,9 @@
             color: var(--text-secondary);
         }
 
-        .desk-table tbody tr.broken .member-dropzone {
+        .desk-table tbody tr.broken .member-select {
             cursor: not-allowed;
-            border-color: var(--text-secondary);
+            opacity: 0.5;
         }
 
         .desk-table td {
@@ -888,58 +884,35 @@
         }
 
         .member-cell {
-            min-width: 180px;
+            min-width: 200px;
         }
 
-        .member-dropzone {
+        .member-select {
+            width: 100%;
             background: var(--bg-dark);
-            border: 2px dashed var(--border);
+            border: 2px solid var(--border);
             border-radius: 4px;
-            padding: 0.8rem;
-            min-height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 0.6rem 0.8rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
         }
 
-        .member-dropzone:hover {
+        .member-select:hover {
             border-color: var(--accent);
-            background: rgba(217, 79, 42, 0.05);
         }
 
-        .member-dropzone.drag-over {
+        .member-select:focus {
             border-color: var(--accent);
-            background: rgba(217, 79, 42, 0.15);
-            border-style: solid;
-        }
-
-        .member-dropzone.filled.drag-over {
-            background: rgba(217, 79, 42, 0.2);
-            box-shadow: 0 0 0 3px rgba(217, 79, 42, 0.3);
-        }
-
-        .member-dropzone.filled {
-            background: var(--bg-card);
-            border-style: solid;
-            border-color: var(--success);
-            color: var(--text-primary);
-            font-weight: 600;
-            justify-content: space-between;
-            cursor: move;
-        }
-
-        .member-dropzone.filled:hover {
-            border-color: var(--accent);
+            outline: none;
             box-shadow: 0 0 0 2px rgba(217, 79, 42, 0.2);
         }
 
-        .member-dropzone.filled.dragging {
-            opacity: 0.5;
-            border-color: var(--accent);
+        .member-select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 0.5rem;
         }
 
         .remove-member {
@@ -1812,14 +1785,6 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
-
-        .draggable {
-            cursor: move;
-        }
-
-        .dragging {
-            opacity: 0.5;
         }
 
         @media (max-width: 768px) {
@@ -2894,9 +2859,6 @@
             'PC61', 'PC62', 'PC63', 'PC64', 'PC65', 'PC66', 'PC67'
         ];
 
-        // Drag and drop state
-        let draggedElement = null;
-
         // State management
         let state = {
             currentPage: 1,
@@ -3898,21 +3860,19 @@
                 const index = parseInt(deskNum.substring(2)) - 1;
                 const deskLabel = callTakeLabels[index];
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
+                // Reset the select
+                const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
+                if (select) select.value = '';
                 return;
             }
             
-            // Check if member is already assigned elsewhere in call take desks
+            // Check if member is already assigned elsewhere in call take desks and clear
             Object.keys(state.callTakeAssignments).forEach(desk => {
-                if (state.callTakeAssignments[desk] === memberId) {
+                if (state.callTakeAssignments[desk] === memberId && desk !== deskNum) {
                     delete state.callTakeAssignments[desk];
-                    const oldDropzone = document.querySelector(`.member-dropzone[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldDropzone) {
-                        oldDropzone.classList.remove('filled');
-                        oldDropzone.innerHTML = 'Drop member here';
-                    }
-                    const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
-                    if (oldRow) {
-                        oldRow.classList.remove('filled');
+                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"][data-type="calltake"]`);
+                    if (oldSelect) {
+                        oldSelect.value = '';
                     }
                 }
             });
@@ -3921,14 +3881,9 @@
             Object.keys(state.assignments).forEach(desk => {
                 if (state.assignments[desk] === memberId) {
                     delete state.assignments[desk];
-                    const oldDropzone = document.querySelector(`.member-dropzone[data-desk="${desk}"]:not([data-type="calltake"])`);
-                    if (oldDropzone) {
-                        oldDropzone.classList.remove('filled');
-                        oldDropzone.innerHTML = 'Drop member here';
-                    }
-                    const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
-                    if (oldRow) {
-                        oldRow.classList.remove('filled');
+                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"]`);
+                    if (oldSelect) {
+                        oldSelect.value = '';
                     }
                 }
             });
@@ -3944,20 +3899,18 @@
                 }
             }
             
-            // Update display
-            const member = masterPersonnel.find(m => m.id === memberId);
-            
-            if (member) {
-                updateCallTakeDeskDisplay(deskNum, member);
-                
-                // Add filled class to row
-                const row = document.querySelector(`tr[data-desk="${deskNum}"]`);
-                if (row) {
-                    row.classList.add('filled');
-                }
+            // Update the select value
+            const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
+            if (select) {
+                select.value = memberId;
             }
             
+            // Refresh available members list
             loadAvailableMembers();
+            
+            // Refresh all member selects to show updated assignment status
+            populateMemberSelects('dispatch');
+            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -4007,8 +3960,7 @@
                     : '';
                 
                 return `
-                    <div class="member-chip ${isAssigned ? 'assigned' : 'draggable'}" 
-                         draggable="${isAssigned ? 'false' : 'true'}" 
+                    <div class="member-chip ${isAssigned ? 'assigned' : ''}" 
                          data-id="${member.id}"
                          style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
                         <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
@@ -4017,9 +3969,6 @@
                     </div>
                 `;
             }).join('');
-            
-            // Add drag event listeners
-            addDragListeners();
         }
 
         function loadScheduledMembersList() {
@@ -4117,9 +4066,9 @@
                         </div>
                     </td>
                     <td class="member-cell">
-                        <div class="member-dropzone" data-desk="${deskNum}">
-                            Drop member here
-                        </div>
+                        <select class="member-select" data-desk="${deskNum}" onchange="handleMemberSelect(this, '${deskNum}', 'dispatch')">
+                            <option value="">Select member...</option>
+                        </select>
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4191,17 +4140,17 @@
                 }
             }
             
+            // Populate member select dropdowns
+            populateMemberSelects('dispatch');
+            
             // Restore existing assignments
             Object.keys(state.assignments).forEach(deskNum => {
                 const memberId = state.assignments[deskNum];
-                const member = masterPersonnel.find(m => m.id === memberId);
-                if (member) {
-                    updateDeskDisplay(deskNum, member);
+                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+                if (select) {
+                    select.value = memberId;
                 }
             });
-            
-            // Add drop zone listeners
-            addDropZoneListeners();
         }
         
         // Create a desk instance row
@@ -4230,9 +4179,9 @@
                     </div>
                 </td>
                 <td class="member-cell">
-                    <div class="member-dropzone" data-desk="${instance.id}" ${deskType === 'calltake' ? 'data-type="calltake"' : ''}>
-                        Drop member here
-                    </div>
+                    <select class="member-select" data-desk="${instance.id}" onchange="handleMemberSelect(this, '${instance.id}', '${deskType}')">
+                        <option value="">Select member...</option>
+                    </select>
                 </td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4471,9 +4420,9 @@
                         </div>
                     </td>
                     <td class="member-cell">
-                        <div class="member-dropzone" data-desk="${deskNum}" data-type="calltake">
-                            Drop member here
-                        </div>
+                        <select class="member-select" data-desk="${deskNum}" data-type="calltake" onchange="handleMemberSelect(this, '${deskNum}', 'calltake')">
+                            <option value="">Select member...</option>
+                        </select>
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4545,17 +4494,79 @@
                 }
             });
             
+            // Populate member select dropdowns
+            populateMemberSelects('calltake');
+            
             // Restore existing assignments
             Object.keys(state.callTakeAssignments).forEach(deskNum => {
                 const memberId = state.callTakeAssignments[deskNum];
-                const member = masterPersonnel.find(m => m.id === memberId);
-                if (member) {
-                    updateCallTakeDeskDisplay(deskNum, member);
+                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+                if (select) {
+                    select.value = memberId;
                 }
             });
+        }
+
+        // Populate member select dropdowns
+        function populateMemberSelects(deskType) {
+            const selects = document.querySelectorAll(`.member-select${deskType === 'calltake' ? '[data-type="calltake"]' : ':not([data-type="calltake"])'}`);
             
-            // Add drop zone listeners
-            addDropZoneListeners();
+            selects.forEach(select => {
+                const deskNum = select.dataset.desk;
+                const currentValue = select.value;
+                
+                // Get appropriate members based on desk type
+                let availableMembers;
+                if (deskType === 'dispatch') {
+                    // Only dispatchers for dispatch desks
+                    availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
+                } else {
+                    // All members for call take desks
+                    availableMembers = masterPersonnel;
+                }
+                
+                // Sort by name
+                availableMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Build options HTML
+                let optionsHTML = '<option value="">Select member...</option>';
+                availableMembers.forEach(member => {
+                    const isAssigned = Object.values(state.assignments).includes(member.id) || 
+                                       Object.values(state.callTakeAssignments).includes(member.id) ||
+                                       state.relieverDuties.some(r => r.memberId === member.id);
+                    const assignedText = isAssigned ? ' (assigned)' : '';
+                    optionsHTML += `<option value="${member.id}">${member.name} - ${member.platoon}${assignedText}</option>`;
+                });
+                
+                select.innerHTML = optionsHTML;
+                
+                // Restore selected value
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            });
+        }
+        
+        // Handle member selection from dropdown
+        function handleMemberSelect(selectElement, deskNum, deskType) {
+            const memberId = parseInt(selectElement.value);
+            
+            if (!memberId) {
+                // Clear assignment
+                if (deskType === 'dispatch') {
+                    removeMember(deskNum);
+                } else {
+                    removeCallTakeMember(deskNum);
+                }
+                return;
+            }
+            
+            // Assign the member
+            if (deskType === 'dispatch') {
+                assignMember(memberId, deskNum);
+            } else {
+                assignCallTakeMember(memberId, deskNum);
+            }
         }
 
         function updateBreakTime(deskNum, breakType, value) {
@@ -4735,43 +4746,21 @@
             state.callTakeBreakTimes[deskNum].notes = value;
         }
 
-        function updateCallTakeDeskDisplay(deskNum, member) {
-            const dropzone = document.querySelector(`.member-dropzone[data-desk="${deskNum}"][data-type="calltake"]`);
-            if (dropzone) {
-                dropzone.classList.add('filled');
-                dropzone.innerHTML = `
-                    <span>${member.name}</span>
-                    <button class="remove-member" onclick="removeCallTakeMember('${deskNum}')">×</button>
-                `;
-                
-                dropzone.draggable = true;
-                dropzone.dataset.memberId = member.id;
-                
-                dropzone.addEventListener('dragstart', handleFilledDragStart);
-                dropzone.addEventListener('dragend', handleFilledDragEnd);
-            }
-        }
-
         function removeCallTakeMember(deskNum) {
             delete state.callTakeAssignments[deskNum];
             
-            const dropzone = document.querySelector(`.member-dropzone[data-desk="${deskNum}"][data-type="calltake"]`);
-            if (dropzone) {
-                dropzone.classList.remove('filled');
-                dropzone.innerHTML = 'Drop member here';
-                dropzone.draggable = false;
-                delete dropzone.dataset.memberId;
-                
-                dropzone.removeEventListener('dragstart', handleFilledDragStart);
-                dropzone.removeEventListener('dragend', handleFilledDragEnd);
+            // Clear the select
+            const select = document.querySelector(`.member-select[data-desk="${deskNum}"][data-type="calltake"]`);
+            if (select) {
+                select.value = '';
             }
             
-            const row = document.querySelector(`tr[data-desk="${deskNum}"]`);
-            if (row) {
-                row.classList.remove('filled');
-            }
-            
+            // Refresh available members list
             loadAvailableMembers();
+            
+            // Refresh all member selects
+            populateMemberSelects('dispatch');
+            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -4799,160 +4788,6 @@
             }, 100);
         }
 
-        function addDragListeners() {
-            const draggables = document.querySelectorAll('.draggable');
-            
-            draggables.forEach(draggable => {
-                draggable.addEventListener('dragstart', handleDragStart);
-                draggable.addEventListener('dragend', handleDragEnd);
-            });
-        }
-
-        function addDropZoneListeners() {
-            const dropZones = document.querySelectorAll('.member-dropzone');
-            
-            dropZones.forEach(zone => {
-                zone.addEventListener('dragover', handleDragOver);
-                zone.addEventListener('drop', handleDrop);
-                zone.addEventListener('dragleave', handleDragLeave);
-            });
-        }
-
-        function handleDragStart(e) {
-            draggedElement = this;
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.dataset.id);
-        }
-
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            this.classList.add('drag-over');
-            return false;
-        }
-
-        function handleDragLeave(e) {
-            this.classList.remove('drag-over');
-        }
-
-        function handleFilledDragStart(e) {
-            draggedElement = this;
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', this.dataset.memberId);
-            e.dataTransfer.setData('sourceDesk', this.dataset.desk);
-        }
-
-        function handleFilledDragEnd(e) {
-            this.classList.remove('dragging');
-        }
-
-        function handleDrop(e) {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            this.classList.remove('drag-over');
-            
-            const memberId = parseInt(e.dataTransfer.getData('text/plain'));
-            const sourceDesk = e.dataTransfer.getData('sourceDesk');
-            const targetDesk = this.dataset.desk;
-            const targetType = this.dataset.type; // 'dispatch' or 'calltake'
-            
-            if (!memberId || !targetDesk) return false;
-            
-            // Check if this is an instance desk
-            const isInstance = targetDesk.includes('-');
-            const baseDeskNum = isInstance ? targetDesk.split('-')[0] : targetDesk;
-            
-            // Determine which state objects to use
-            const isCallTake = targetType === 'calltake' || targetDesk.startsWith('CT');
-            const statusObj = isCallTake ? state.callTakeDeskStatus : state.deskStatus;
-            const assignmentObj = isCallTake ? state.callTakeAssignments : state.assignments;
-            
-            // Get member details from masterPersonnel
-            const member = masterPersonnel.find(m => m.id === memberId);
-            
-            if (!member) return false;
-            
-            // Check if assigning to dispatch desk and member has Dispatcher tag
-            if (!isCallTake && (!member.tags || !member.tags.includes('Dispatcher'))) {
-                alert(`Cannot assign ${member.name} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
-                return false;
-            }
-            
-            // Check if target desk is broken (only for base desks, not instances)
-            if (!isInstance && statusObj[targetDesk] === false) {
-                const deskLabel = isCallTake ? callTakeLabels[parseInt(targetDesk.substring(2)) - 1] : (deskLabels[targetDesk] || `PD${targetDesk}`);
-                alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
-                return false;
-            }
-            
-            // Check if we're swapping between two filled desks
-            if (sourceDesk && this.classList.contains('filled')) {
-                const sourceIsCallTake = sourceDesk.startsWith('CT');
-                
-                // Can only swap within same desk type
-                if (sourceIsCallTake !== isCallTake) {
-                    alert('Cannot swap between Dispatch and Call Take desks');
-                    return false;
-                }
-                
-                const sourceIsInstance = sourceDesk.includes('-');
-                const sourceStatusObj = sourceIsCallTake ? state.callTakeDeskStatus : state.deskStatus;
-                
-                // Check if source desk is broken (only for base desks)
-                if (!sourceIsInstance && sourceStatusObj[sourceDesk] === false) {
-                    const sourceDeskLabel = sourceIsCallTake ? callTakeLabels[parseInt(sourceDesk.substring(2)) - 1] : (deskLabels[sourceDesk] || `PD${sourceDesk}`);
-                    alert(`Cannot swap from ${sourceDeskLabel} - desk is marked as broken`);
-                    return false;
-                }
-                
-                // For dispatch desks, check that the member being moved has Dispatcher tag
-                if (!isCallTake) {
-                    const swappingMember = masterPersonnel.find(m => m.id === memberId);
-                    if (!swappingMember || !swappingMember.tags || !swappingMember.tags.includes('Dispatcher')) {
-                        alert(`Cannot move ${swappingMember?.name || 'this member'} to dispatch desk.\n\nThis member does not have Dispatcher certification.`);
-                        return false;
-                    }
-                }
-                
-                // Swap operation
-                const targetMemberId = assignmentObj[targetDesk];
-                
-                // Perform the swap
-                assignmentObj[sourceDesk] = targetMemberId;
-                assignmentObj[targetDesk] = memberId;
-                
-                // Update both displays
-                const sourceMember = masterPersonnel.find(m => m.id === memberId);
-                const targetMember = masterPersonnel.find(m => m.id === targetMemberId);
-                
-                if (sourceMember && targetMember) {
-                    if (isCallTake) {
-                        updateCallTakeDeskDisplay(targetDesk, sourceMember);
-                        updateCallTakeDeskDisplay(sourceDesk, targetMember);
-                    } else {
-                        updateDeskDisplay(targetDesk, sourceMember);
-                        updateDeskDisplay(sourceDesk, targetMember);
-                    }
-                }
-            } else {
-                // Regular assignment from available members
-                if (isCallTake) {
-                    assignCallTakeMember(memberId, targetDesk);
-                } else {
-                    assignMember(memberId, targetDesk);
-                }
-            }
-            
-            return false;
-        }
-
         function assignMember(memberId, deskNum) {
             // Get the member details from master personnel
             const member = masterPersonnel.find(m => m.id === memberId);
@@ -4966,6 +4801,9 @@
             // Check if member has Dispatcher tag
             if (!member.tags || !member.tags.includes('Dispatcher')) {
                 alert(`Cannot assign ${member.name} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
+                // Reset the select
+                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+                if (select) select.value = '';
                 return;
             }
             
@@ -4973,23 +4811,20 @@
             if (!isInstance && state.deskStatus[deskNum] === false) {
                 const deskLabel = deskLabels[deskNum] || `PD${deskNum}`;
                 alert(`Cannot assign to ${deskLabel} - desk is marked as broken`);
+                // Reset the select
+                const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+                if (select) select.value = '';
                 return;
             }
             
-            // Check if member is already assigned elsewhere (dispatch desks)
+            // Check if member is already assigned elsewhere (dispatch desks) and clear
             Object.keys(state.assignments).forEach(desk => {
-                if (state.assignments[desk] === memberId) {
+                if (state.assignments[desk] === memberId && desk !== deskNum) {
                     delete state.assignments[desk];
-                    // Clear that desk's display
-                    const oldDropzone = document.querySelector(`.member-dropzone[data-desk="${desk}"]`);
-                    if (oldDropzone) {
-                        oldDropzone.classList.remove('filled');
-                        oldDropzone.innerHTML = 'Drop member here';
-                    }
-                    // Clear row styling
-                    const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
-                    if (oldRow) {
-                        oldRow.classList.remove('filled');
+                    // Clear that desk's select
+                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"]`);
+                    if (oldSelect) {
+                        oldSelect.value = '';
                     }
                 }
             });
@@ -4998,14 +4833,9 @@
             Object.keys(state.callTakeAssignments).forEach(desk => {
                 if (state.callTakeAssignments[desk] === memberId) {
                     delete state.callTakeAssignments[desk];
-                    const oldDropzone = document.querySelector(`.member-dropzone[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldDropzone) {
-                        oldDropzone.classList.remove('filled');
-                        oldDropzone.innerHTML = 'Drop member here';
-                    }
-                    const oldRow = document.querySelector(`tr[data-desk="${desk}"]`);
-                    if (oldRow) {
-                        oldRow.classList.remove('filled');
+                    const oldSelect = document.querySelector(`.member-select[data-desk="${desk}"][data-type="calltake"]`);
+                    if (oldSelect) {
+                        oldSelect.value = '';
                     }
                 }
             });
@@ -5020,17 +4850,18 @@
                 }
             }
             
-            // Update desk display
-            updateDeskDisplay(deskNum, member);
-            
-            // Update row styling
-            const row = document.querySelector(`tr[data-desk="${deskNum}"]`);
-            if (row) {
-                row.classList.add('filled');
+            // Update the select value
+            const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+            if (select) {
+                select.value = memberId;
             }
             
-            // Refresh available members
+            // Refresh available members list
             loadAvailableMembers();
+            
+            // Refresh all member selects to show updated assignment status
+            populateMemberSelects('dispatch');
+            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
@@ -5042,47 +4873,21 @@
             setTimeout(() => validateBreakTimes(deskNum, 'dispatch', memberId), 100);
         }
 
-        function updateDeskDisplay(deskNum, member) {
-            const dropzone = document.querySelector(`.member-dropzone[data-desk="${deskNum}"]`);
-            if (dropzone) {
-                dropzone.classList.add('filled');
-                dropzone.innerHTML = `
-                    <span>${member.name}</span>
-                    <button class="remove-member" onclick="removeMember('${deskNum}')">×</button>
-                `;
-                
-                // Make filled dropzones draggable for swapping
-                dropzone.draggable = true;
-                dropzone.dataset.memberId = member.id;
-                
-                // Add drag event listeners
-                dropzone.addEventListener('dragstart', handleFilledDragStart);
-                dropzone.addEventListener('dragend', handleFilledDragEnd);
-            }
-        }
-
         function removeMember(deskNum) {
             delete state.assignments[deskNum];
             
-            const dropzone = document.querySelector(`.member-dropzone[data-desk="${deskNum}"]`);
-            if (dropzone) {
-                dropzone.classList.remove('filled');
-                dropzone.innerHTML = 'Drop member here';
-                dropzone.draggable = false;
-                delete dropzone.dataset.memberId;
-                
-                // Remove drag event listeners
-                dropzone.removeEventListener('dragstart', handleFilledDragStart);
-                dropzone.removeEventListener('dragend', handleFilledDragEnd);
+            // Clear the select
+            const select = document.querySelector(`.member-select[data-desk="${deskNum}"]`);
+            if (select) {
+                select.value = '';
             }
             
-            // Update row styling
-            const row = document.querySelector(`tr[data-desk="${deskNum}"]`);
-            if (row) {
-                row.classList.remove('filled');
-            }
-            
+            // Refresh available members list
             loadAvailableMembers();
+            
+            // Refresh all member selects
+            populateMemberSelects('dispatch');
+            populateMemberSelects('calltake');
             
             // Refresh reliever duties to update dropdowns
             renderRelieverDuties();
