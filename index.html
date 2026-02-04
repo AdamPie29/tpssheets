@@ -2685,8 +2685,8 @@
             // Check for existing schedule for today
             checkForExistingSchedule();
             
-            // Render calendar
-            renderCalendar();
+            // Set sync status to ready
+            setSyncStatus('synced', 'Ready');
             
             console.log('App initialized with database data');
         }
@@ -2893,6 +2893,9 @@
             'PC51', 'PC52', 'PC53', 'PC54', 'PC55', 'PC56', 'PC57', 'PC58',
             'PC61', 'PC62', 'PC63', 'PC64', 'PC65', 'PC66', 'PC67'
         ];
+
+        // Drag and drop state
+        let draggedElement = null;
 
         // State management
         let state = {
@@ -3801,11 +3804,6 @@
                 swapSelect.innerHTML += `<option value="${member.id}">${member.name}</option>`;
             });
         }
-
-        document.getElementById('addReason').addEventListener('change', function() {
-            const swapGroup = document.getElementById('swapMemberGroup');
-            swapGroup.style.display = this.value === 'rdo' ? 'block' : 'none';
-        });
 
         function addAdditionalMember() {
             const memberId = parseInt(document.getElementById('additionalMember').value);
@@ -4819,8 +4817,6 @@
                 zone.addEventListener('dragleave', handleDragLeave);
             });
         }
-
-        let draggedElement = null;
 
         function handleDragStart(e) {
             draggedElement = this;
