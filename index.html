@@ -2788,24 +2788,38 @@
             setSyncStatus('syncing', 'Saving schedule...');
             
             try {
+                // Build the save payload - always include core fields
+                const payload = {
+                    schedule_date: scheduleData.date,
+                    platoon: scheduleData.platoon,
+                    shift: scheduleData.shift,
+                    dispatch_assignments: scheduleData.dispatchDesks.assignments,
+                    dispatch_desk_hours: scheduleData.dispatchDesks.deskHours,
+                    dispatch_break_times: scheduleData.dispatchDesks.breakTimes,
+                    dispatch_desk_status: scheduleData.dispatchDesks.deskStatus,
+                    calltake_assignments: scheduleData.callTakeDesks.assignments,
+                    calltake_desk_hours: scheduleData.callTakeDesks.deskHours,
+                    calltake_break_times: scheduleData.callTakeDesks.breakTimes,
+                    calltake_desk_status: scheduleData.callTakeDesks.deskStatus,
+                    reliever_duties: scheduleData.relieverDuties,
+                    additional_members: scheduleData.additionalMembers || [],
+                    created_by: currentUser?.id
+                };
+                
+                // Store extended data in additional_members JSON field as a workaround
+                // until dedicated columns are added to the database
+                payload.additional_members = {
+                    dispatch_shift_types: scheduleData.dispatchDesks.shiftTypes || {},
+                    dispatch_desk_functions: scheduleData.dispatchDesks.deskFunctions || {},
+                    dispatch_instances: scheduleData.dispatchDesks.instances || {},
+                    calltake_shift_types: scheduleData.callTakeDesks.shiftTypes || {},
+                    calltake_instances: scheduleData.callTakeDesks.instances || {},
+                    special_situations: scheduleData.specialSituations || []
+                };
+                
                 const { data, error } = await supabaseClient
                     .from('schedules')
-                    .upsert({
-                        schedule_date: scheduleData.date,
-                        platoon: scheduleData.platoon,
-                        shift: scheduleData.shift,
-                        dispatch_assignments: scheduleData.dispatchDesks.assignments,
-                        dispatch_desk_hours: scheduleData.dispatchDesks.deskHours,
-                        dispatch_break_times: scheduleData.dispatchDesks.breakTimes,
-                        dispatch_desk_status: scheduleData.dispatchDesks.deskStatus,
-                        calltake_assignments: scheduleData.callTakeDesks.assignments,
-                        calltake_desk_hours: scheduleData.callTakeDesks.deskHours,
-                        calltake_break_times: scheduleData.callTakeDesks.breakTimes,
-                        calltake_desk_status: scheduleData.callTakeDesks.deskStatus,
-                        reliever_duties: scheduleData.relieverDuties,
-                        additional_members: scheduleData.additionalMembers,
-                        created_by: currentUser?.id
-                    }, { onConflict: 'schedule_date,platoon,shift' });
+                    .upsert(payload, { onConflict: 'schedule_date,platoon,shift' });
                 
                 if (error) throw error;
                 
@@ -2833,6 +2847,12 @@
                 if (data) {
                     data.forEach(schedule => {
                         const key = `${schedule.schedule_date}_${schedule.platoon}_${schedule.shift}`;
+                        
+                        // Extended data is stored in additional_members JSON field
+                        const ext = (schedule.additional_members && typeof schedule.additional_members === 'object' && !Array.isArray(schedule.additional_members))
+                            ? schedule.additional_members 
+                            : {};
+                        
                         state.openSeatingData[key] = {
                             date: schedule.schedule_date,
                             platoon: schedule.platoon,
@@ -2841,16 +2861,22 @@
                                 assignments: schedule.dispatch_assignments || {},
                                 deskHours: schedule.dispatch_desk_hours || {},
                                 breakTimes: schedule.dispatch_break_times || {},
-                                deskStatus: schedule.dispatch_desk_status || {}
+                                deskStatus: schedule.dispatch_desk_status || {},
+                                shiftTypes: ext.dispatch_shift_types || {},
+                                deskFunctions: ext.dispatch_desk_functions || {},
+                                instances: ext.dispatch_instances || {}
                             },
                             callTakeDesks: {
                                 assignments: schedule.calltake_assignments || {},
                                 deskHours: schedule.calltake_desk_hours || {},
                                 breakTimes: schedule.calltake_break_times || {},
-                                deskStatus: schedule.calltake_desk_status || {}
+                                deskStatus: schedule.calltake_desk_status || {},
+                                shiftTypes: ext.calltake_shift_types || {},
+                                instances: ext.calltake_instances || {}
                             },
                             relieverDuties: schedule.reliever_duties || [],
-                            additionalMembers: schedule.additional_members || []
+                            specialSituations: ext.special_situations || [],
+                            additionalMembers: []
                         };
                     });
                 }
@@ -5825,18 +5851,29 @@
                 state.deskHours = savedSchedule.dispatchDesks?.deskHours || {};
                 state.deskStatus = savedSchedule.dispatchDesks?.deskStatus || {};
                 state.breakTimes = savedSchedule.dispatchDesks?.breakTimes || {};
+                state.shiftTypes = savedSchedule.dispatchDesks?.shiftTypes || {};
+                state.deskFunctions = savedSchedule.dispatchDesks?.deskFunctions || {};
+                state.deskInstances = savedSchedule.dispatchDesks?.instances || {};
                 
                 state.callTakeAssignments = savedSchedule.callTakeDesks?.assignments || {};
                 state.callTakeDeskHours = savedSchedule.callTakeDesks?.deskHours || {};
                 state.callTakeDeskStatus = savedSchedule.callTakeDesks?.deskStatus || {};
                 state.callTakeBreakTimes = savedSchedule.callTakeDesks?.breakTimes || {};
+                state.callTakeShiftTypes = savedSchedule.callTakeDesks?.shiftTypes || {};
+                state.callTakeDeskInstances = savedSchedule.callTakeDesks?.instances || {};
                 
                 state.relieverDuties = savedSchedule.relieverDuties || [];
-                state.additionalMembers = savedSchedule.additionalMembers || [];
+                state.specialSituations = savedSchedule.specialSituations || [];
+                state.additionalMembers = [];
                 
                 // Update reliever ID counter
                 if (state.relieverDuties.length > 0) {
                     relieverIdCounter = Math.max(...state.relieverDuties.map(r => r.id)) + 1;
+                }
+                
+                // Update special situation ID counter
+                if (state.specialSituations.length > 0) {
+                    specialSituationIdCounter = Math.max(...state.specialSituations.map(s => s.id)) + 1;
                 }
                 
                 return true;
@@ -6595,27 +6632,33 @@
         async function saveRelieverDetails(relieverId) {
             // Save the entire schedule to the database
             const schedule = {
-                platoon: state.selectedPlatoon,
+                platoon: 'ALL',
                 date: state.scheduleDate,
-                shift: state.selectedShift,
+                shift: 'full',
                 dispatchDesks: {
                     assignments: { ...state.assignments },
                     deskHours: { ...state.deskHours },
                     deskStatus: { ...state.deskStatus },
-                    breakTimes: { ...state.breakTimes }
+                    breakTimes: { ...state.breakTimes },
+                    shiftTypes: { ...state.shiftTypes },
+                    deskFunctions: { ...state.deskFunctions },
+                    instances: JSON.parse(JSON.stringify(state.deskInstances))
                 },
                 callTakeDesks: {
                     assignments: { ...state.callTakeAssignments },
                     deskHours: { ...state.callTakeDeskHours },
                     deskStatus: { ...state.callTakeDeskStatus },
-                    breakTimes: { ...state.callTakeBreakTimes }
+                    breakTimes: { ...state.callTakeBreakTimes },
+                    shiftTypes: { ...state.callTakeShiftTypes },
+                    instances: JSON.parse(JSON.stringify(state.callTakeDeskInstances))
                 },
                 relieverDuties: [...state.relieverDuties],
-                additionalMembers: [...state.additionalMembers]
+                specialSituations: [...state.specialSituations.filter(s => s.memberId)],
+                additionalMembers: []
             };
             
             // Remove old entry from openSeatingData first
-            const scheduleKey = `${state.scheduleDate}_${state.selectedPlatoon}_${state.selectedShift}`;
+            const scheduleKey = `${state.scheduleDate}_ALL_full`;
             delete state.openSeatingData[scheduleKey];
             
             // Save to database
