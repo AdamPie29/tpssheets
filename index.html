@@ -7081,79 +7081,76 @@
                     ? (schedule.dispatchDesks.breakTimes || {})
                     : (schedule.callTakeDesks.breakTimes || {});
                 
-                // Check if this desk has an assignment (must be a valid member ID)
+                // Check if this desk has a regular assignment
                 const memberId = assignments[deskNum];
-                if (!memberId) return;
-                
-                // Check if the current time falls within the desk hours
-                const hours = deskHours[deskNum];
-                const breaks = breakTimes[deskNum];
-                
-                if (hours && hours.start && hours.end) {
-                    const checkTime = hour * 60 + minute;
-                    const [startHour, startMin] = hours.start.split(':').map(Number);
-                    const [endHour, endMin] = hours.end.split(':').map(Number);
-                    let startTime = startHour * 60 + startMin;
-                    let endTime = endHour * 60 + endMin;
+                if (memberId) {
+                    const hours = deskHours[deskNum];
+                    const breaks = breakTimes[deskNum];
                     
-                    // Handle overnight shifts
-                    let adjustedCheckTime = checkTime;
-                    if (endTime < startTime) {
-                        endTime += 24 * 60;
-                        if (adjustedCheckTime < startTime) {
-                            adjustedCheckTime += 24 * 60;
-                        }
-                    }
-                    
-                    // Check if within working hours
-                    if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
-                        // Now check if they're on a break
-                        let onBreak = false;
+                    if (hours && hours.start && hours.end) {
+                        const checkTime = hour * 60 + minute;
+                        const [startHour, startMin] = hours.start.split(':').map(Number);
+                        const [endHour, endMin] = hours.end.split(':').map(Number);
+                        let startTime = startHour * 60 + startMin;
+                        let endTime = endHour * 60 + endMin;
                         
-                        if (breaks) {
-                            // Check Break 1 (15 minutes)
-                            if (breaks.break1) {
-                                const [b1Hour, b1Min] = breaks.break1.split(':').map(Number);
-                                const break1Start = b1Hour * 60 + b1Min;
-                                const break1End = break1Start + 15;
-                                if (checkTime >= break1Start && checkTime < break1End) {
-                                    onBreak = true;
-                                }
-                            }
-                            
-                            // Check Lunch (45 minutes, or 60 if +15 enabled)
-                            // Only check if not TIB/NL
-                            if (breaks.lunch && breaks.tibOption === 'na') {
-                                const [lunchHour, lunchMin] = breaks.lunch.split(':').map(Number);
-                                const lunchStart = lunchHour * 60 + lunchMin;
-                                const lunchDuration = breaks.plus15Enabled ? 60 : 45;
-                                const lunchEnd = lunchStart + lunchDuration;
-                                if (checkTime >= lunchStart && checkTime < lunchEnd) {
-                                    onBreak = true;
-                                }
-                            }
-                            
-                            // Check Break 2 (15 minutes)
-                            if (breaks.break2) {
-                                const [b2Hour, b2Min] = breaks.break2.split(':').map(Number);
-                                const break2Start = b2Hour * 60 + b2Min;
-                                const break2End = break2Start + 15;
-                                if (checkTime >= break2Start && checkTime < break2End) {
-                                    onBreak = true;
-                                }
+                        // Handle overnight shifts
+                        let adjustedCheckTime = checkTime;
+                        if (endTime < startTime) {
+                            endTime += 24 * 60;
+                            if (adjustedCheckTime < startTime) {
+                                adjustedCheckTime += 24 * 60;
                             }
                         }
                         
-                        // Only count if not on break
-                        if (!onBreak) {
-                            count++;
-                            // Get member name
-                            const member = masterPersonnel.find(m => m.id === memberId);
-                            if (member) {
-                                const nameParts = member.name.split(',');
-                                const lastName = nameParts[0].trim();
-                                const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                names.push(`${lastName}, ${firstInitial}`);
+                        // Check if within working hours
+                        if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
+                            // Now check if they're on a break
+                            let onBreak = false;
+                            
+                            if (breaks) {
+                                // Check Break 1 (15 minutes)
+                                if (breaks.break1) {
+                                    const [b1Hour, b1Min] = breaks.break1.split(':').map(Number);
+                                    const break1Start = b1Hour * 60 + b1Min;
+                                    const break1End = break1Start + 15;
+                                    if (checkTime >= break1Start && checkTime < break1End) {
+                                        onBreak = true;
+                                    }
+                                }
+                                
+                                // Check Lunch (45 minutes, or 60 if +15 enabled)
+                                if (breaks.lunch && breaks.tibOption === 'na') {
+                                    const [lunchHour, lunchMin] = breaks.lunch.split(':').map(Number);
+                                    const lunchStart = lunchHour * 60 + lunchMin;
+                                    const lunchDuration = breaks.plus15Enabled ? 60 : 45;
+                                    const lunchEnd = lunchStart + lunchDuration;
+                                    if (checkTime >= lunchStart && checkTime < lunchEnd) {
+                                        onBreak = true;
+                                    }
+                                }
+                                
+                                // Check Break 2 (15 minutes)
+                                if (breaks.break2) {
+                                    const [b2Hour, b2Min] = breaks.break2.split(':').map(Number);
+                                    const break2Start = b2Hour * 60 + b2Min;
+                                    const break2End = break2Start + 15;
+                                    if (checkTime >= break2Start && checkTime < break2End) {
+                                        onBreak = true;
+                                    }
+                                }
+                            }
+                            
+                            // Only count if not on break
+                            if (!onBreak) {
+                                count++;
+                                const member = masterPersonnel.find(m => m.id === memberId);
+                                if (member) {
+                                    const nameParts = member.name.split(',');
+                                    const lastName = nameParts[0].trim();
+                                    const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                    names.push(`${lastName}, ${firstInitial}`);
+                                }
                             }
                         }
                     }
@@ -7231,21 +7228,16 @@
                 if (schedule.relieverDuties) {
                     schedule.relieverDuties.forEach(reliever => {
                         if (reliever.memberId && reliever.schedule) {
-                            // Format time as HHMM for lookup
                             const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                             const assignedDesk = reliever.schedule[timeKey];
                             
                             if (assignedDesk) {
-                                // Parse desk assignment (could be PD01, PC31, etc.)
                                 const deskUpper = assignedDesk.toUpperCase();
                                 
-                                // Check if this reliever is assigned to the current desk
                                 if (deskType === 'dispatch') {
-                                    // Match PD01, PD02, etc or just 01, 02, etc
                                     const match = deskUpper.match(/(?:PD)?(\d{2})/);
                                     if (match && match[1] === deskNum) {
                                         count++;
-                                        // Get reliever name
                                         const member = masterPersonnel.find(m => m.id === reliever.memberId);
                                         if (member) {
                                             const nameParts = member.name.split(',');
@@ -7255,12 +7247,10 @@
                                         }
                                     }
                                 } else if (deskType === 'calltake') {
-                                    // Match PC31, PC32, etc
                                     const ctIndex = parseInt(deskNum.substring(2)) - 1;
                                     const expectedLabel = callTakeLabels[ctIndex];
                                     if (deskUpper === expectedLabel) {
                                         count++;
-                                        // Get reliever name
                                         const member = masterPersonnel.find(m => m.id === reliever.memberId);
                                         if (member) {
                                             const nameParts = member.name.split(',');
