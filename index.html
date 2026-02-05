@@ -816,6 +816,63 @@
             border-color: #ef4444 !important;
         }
 
+        /* Shift Type Selector Styles */
+        .shift-type-select {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--primary-light);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            min-width: 55px;
+        }
+        
+        .shift-type-select.type-regular {
+            background: rgba(46, 160, 67, 0.2);
+            border-color: #2ea043;
+            color: #2ea043;
+        }
+        
+        .shift-type-select.type-callback {
+            background: rgba(255, 193, 7, 0.2);
+            border-color: #ffc107;
+            color: #d4a106;
+        }
+        
+        .shift-type-select.type-overtime {
+            background: rgba(217, 79, 42, 0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Member Status Badges */
+        .member-status-badge {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .member-status-badge.status-on-duty {
+            background: rgba(46, 160, 67, 0.2);
+            color: #2ea043;
+        }
+        
+        .member-status-badge.status-off-duty {
+            background: rgba(255, 193, 7, 0.2);
+            color: #d4a106;
+        }
+        
+        .member-status-badge.status-rdo {
+            background: rgba(156, 163, 175, 0.2);
+            color: #9ca3af;
+        }
+
         .desk-table {
             width: 100%;
             border-collapse: collapse;
@@ -2024,6 +2081,7 @@
                                                 </th>
                                                 <th>Position</th>
                                                 <th>Member</th>
+                                                <th style="width: 60px;">Type</th>
                                                 <th>Hours</th>
                                                 <th>Break 1</th>
                                                 <th>Lunch</th>
@@ -2068,6 +2126,7 @@
                                                 </th>
                                                 <th>Position</th>
                                                 <th>Member</th>
+                                                <th style="width: 60px;">Type</th>
                                                 <th>Hours</th>
                                                 <th>Break 1</th>
                                                 <th>Lunch</th>
@@ -2766,6 +2825,7 @@
                 Object.assign(state.deskHours, schedule.dispatchDesks?.deskHours || {});
                 Object.assign(state.breakTimes, schedule.dispatchDesks?.breakTimes || {});
                 Object.assign(state.deskStatus, schedule.dispatchDesks?.deskStatus || {});
+                Object.assign(state.shiftTypes, schedule.dispatchDesks?.shiftTypes || {});
                 
                 // Merge dispatch desk instances
                 if (schedule.dispatchDesks?.instances) {
@@ -2777,6 +2837,7 @@
                 Object.assign(state.callTakeDeskHours, schedule.callTakeDesks?.deskHours || {});
                 Object.assign(state.callTakeBreakTimes, schedule.callTakeDesks?.breakTimes || {});
                 Object.assign(state.callTakeDeskStatus, schedule.callTakeDesks?.deskStatus || {});
+                Object.assign(state.callTakeShiftTypes, schedule.callTakeDesks?.shiftTypes || {});
                 
                 // Merge call take desk instances
                 if (schedule.callTakeDesks?.instances) {
@@ -2823,11 +2884,13 @@
             state.deskHours = {};
             state.breakTimes = {};
             state.deskStatus = {};
+            state.shiftTypes = {};
             state.deskInstances = {};
             state.callTakeAssignments = {};
             state.callTakeDeskHours = {};
             state.callTakeBreakTimes = {};
             state.callTakeDeskStatus = {};
+            state.callTakeShiftTypes = {};
             state.callTakeDeskInstances = {};
             state.relieverDuties = [];
             relieverIdCounter = 1;
@@ -2948,11 +3011,13 @@
             breakTimes: {},
             deskHours: {},
             deskStatus: {}, // Track desk working status: true = working, false = broken
+            shiftTypes: {}, // Track shift type per desk: 'regular', 'callback', 'overtime'
             deskInstances: {}, // Track multiple instances of same desk (e.g., 01: [{id: '01-1', ...}, {id: '01-2', ...}])
             callTakeAssignments: {},
             callTakeBreakTimes: {},
             callTakeDeskHours: {},
             callTakeDeskStatus: {},
+            callTakeShiftTypes: {}, // Track shift type per call take desk
             callTakeDeskInstances: {}, // Track multiple instances of same call take desk
             relieverDuties: [], // Array of reliever duty objects
             memberTagFilters: [], // For future filtering functionality
@@ -3275,9 +3340,11 @@
             
             if (!breakTimes || !deskHours || !deskHours.start || !deskHours.end) return;
             
-            // Get member info to check if callback (from additionalMembers which tracks CB/RDO)
-            const additionalMember = state.additionalMembers?.find(m => m.id === memberId);
-            const isCallback = additionalMember && additionalMember.reason === 'callback';
+            // Check shift type from the dropdown selector
+            const shiftType = deskType === 'dispatch' 
+                ? (state.shiftTypes[deskNum] || 'regular')
+                : (state.callTakeShiftTypes[deskNum] || 'regular');
+            const isCallback = shiftType === 'callback';
             
             // Calculate shift duration in hours
             const [startHour, startMin] = deskHours.start.split(':').map(Number);
@@ -3484,6 +3551,8 @@
             document.getElementById('scheduleDate').addEventListener('change', function() {
                 state.scheduleDate = this.value;
                 checkForExistingSchedule();
+                // Refresh available members to update status badges for new date
+                loadAvailableMembers();
             });
             
             // Listen for auth state changes
@@ -4033,6 +4102,15 @@
                 const isAssignedReliever = state.relieverDuties.some(r => r.memberId === member.id);
                 const isAssigned = isAssignedDispatch || isAssignedCallTake || isAssignedReliever;
                 
+                // Get member's expected status for the selected date
+                const scheduleDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+                const memberStatus = getMemberStatusForDate(member, scheduleDate);
+                const statusBadge = memberStatus === 'on-duty' 
+                    ? '<span class="member-status-badge status-on-duty">On Duty</span>'
+                    : memberStatus === 'off-duty'
+                    ? '<span class="member-status-badge status-off-duty">Off/CB</span>'
+                    : '';
+                
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
                         `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">${tag}</span>`
@@ -4043,7 +4121,10 @@
                     <div class="member-chip ${isAssigned ? 'assigned' : ''}" 
                          data-id="${member.id}"
                          style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
-                        <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; font-size: 0.95rem;">${member.name}</span>
+                            ${statusBadge}
+                        </div>
                         <div style="font-size: 0.8rem; color: var(--text-secondary);">Platoon ${member.platoon} • Badge: ${member.badge}</div>
                         ${tagsHTML ? `<div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">${tagsHTML}</div>` : '<div style="font-size: 0.75rem; color: var(--text-secondary);">No certifications</div>'}
                     </div>
@@ -4154,6 +4235,14 @@
                             <button class="clear-assignment-btn" onclick="clearAssignment('${deskNum}', 'dispatch')" title="Clear assignment">×</button>
                             <div class="autocomplete-dropdown" data-desk="${deskNum}" data-type="dispatch"></div>
                         </div>
+                    </td>
+                    <td>
+                        <select class="shift-type-select ${getShiftTypeClass(state.shiftTypes[deskNum] || 'regular')}" 
+                                onchange="updateShiftType('${deskNum}', this.value, 'dispatch')">
+                            <option value="regular" ${(state.shiftTypes[deskNum] || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
+                            <option value="callback" ${state.shiftTypes[deskNum] === 'callback' ? 'selected' : ''}>CB</option>
+                            <option value="overtime" ${state.shiftTypes[deskNum] === 'overtime' ? 'selected' : ''}>OT</option>
+                        </select>
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -4531,6 +4620,14 @@
                         </div>
                     </td>
                     <td>
+                        <select class="shift-type-select ${getShiftTypeClass(state.callTakeShiftTypes[deskNum] || 'regular')}" 
+                                onchange="updateShiftType('${deskNum}', this.value, 'calltake')">
+                            <option value="regular" ${(state.callTakeShiftTypes[deskNum] || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
+                            <option value="callback" ${state.callTakeShiftTypes[deskNum] === 'callback' ? 'selected' : ''}>CB</option>
+                            <option value="overtime" ${state.callTakeShiftTypes[deskNum] === 'overtime' ? 'selected' : ''}>OT</option>
+                        </select>
+                    </td>
+                    <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
                                    value="${state.callTakeDeskHours[deskNum]?.start || defaultStart}" 
@@ -4809,6 +4906,75 @@
                 document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
             }
         });
+
+        // Shift Type Helper Functions
+        function getShiftTypeClass(shiftType) {
+            switch(shiftType) {
+                case 'callback': return 'type-callback';
+                case 'overtime': return 'type-overtime';
+                default: return 'type-regular';
+            }
+        }
+
+        function updateShiftType(deskNum, shiftType, deskType) {
+            if (deskType === 'dispatch') {
+                state.shiftTypes[deskNum] = shiftType;
+            } else {
+                state.callTakeShiftTypes[deskNum] = shiftType;
+            }
+            
+            // Update the select element styling
+            const tableId = deskType === 'dispatch' ? 'deskTableBody' : 'callTakeTableBody';
+            const row = document.querySelector(`#${tableId} tr[data-desk="${deskNum}"]`);
+            if (row) {
+                const select = row.querySelector('.shift-type-select');
+                if (select) {
+                    select.className = `shift-type-select ${getShiftTypeClass(shiftType)}`;
+                }
+            }
+            
+            // Re-validate break times since callback rules are different
+            const memberId = deskType === 'dispatch' ? state.assignments[deskNum] : state.callTakeAssignments[deskNum];
+            validateBreakTimes(deskNum, deskType, memberId);
+        }
+
+        // Get member's expected status for a given date based on platoon rotation
+        function getMemberStatusForDate(member, dateStr) {
+            if (!member || !member.platoon) return 'unknown';
+            
+            // Get the 35-day rotation pattern
+            const platoon = member.platoon;
+            const scheduleDate = new Date(dateStr);
+            
+            // Reference: Jan 6, 2026 - Platoon 1 starts Day shift
+            const referenceDate = new Date(2026, 0, 6);
+            const daysDiff = Math.floor((scheduleDate - referenceDate) / (24 * 60 * 60 * 1000));
+            const cycleDay = ((daysDiff % 35) + 35) % 35; // 0-34
+            
+            // Platoon rotation offsets (each platoon starts 7 days later in the cycle)
+            const platoonOffsets = { '1': 0, '2': 7, '3': 14, '4': 21, '5': 28 };
+            const offset = platoonOffsets[platoon] || 0;
+            const adjustedCycleDay = ((cycleDay - offset) % 35 + 35) % 35;
+            
+            // 35-day pattern: 
+            // Days 0-6: Day shift (working)
+            // Days 7-13: Off
+            // Days 14-20: Afternoon shift (working)
+            // Days 21-27: Off
+            // Days 28-34: Night shift (working)
+            
+            if (adjustedCycleDay >= 0 && adjustedCycleDay <= 6) {
+                return 'on-duty'; // Day shift
+            } else if (adjustedCycleDay >= 7 && adjustedCycleDay <= 13) {
+                return 'off-duty'; // Off after days
+            } else if (adjustedCycleDay >= 14 && adjustedCycleDay <= 20) {
+                return 'on-duty'; // Afternoon shift
+            } else if (adjustedCycleDay >= 21 && adjustedCycleDay <= 27) {
+                return 'off-duty'; // Off after afternoons
+            } else {
+                return 'on-duty'; // Night shift
+            }
+        }
 
         function updateBreakTime(deskNum, breakType, value) {
             if (!state.breakTimes[deskNum]) {
@@ -5195,6 +5361,7 @@
                     deskHours: { ...state.deskHours },
                     deskStatus: { ...state.deskStatus },
                     breakTimes: { ...state.breakTimes },
+                    shiftTypes: { ...state.shiftTypes },
                     instances: JSON.parse(JSON.stringify(state.deskInstances)) // Deep copy
                 },
                 callTakeDesks: {
@@ -5202,6 +5369,7 @@
                     deskHours: { ...state.callTakeDeskHours },
                     deskStatus: { ...state.callTakeDeskStatus },
                     breakTimes: { ...state.callTakeBreakTimes },
+                    shiftTypes: { ...state.callTakeShiftTypes },
                     instances: JSON.parse(JSON.stringify(state.callTakeDeskInstances)) // Deep copy
                 },
                 relieverDuties: [...state.relieverDuties],
