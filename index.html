@@ -1862,35 +1862,35 @@
         .notes-grid {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
         }
 
-        .notes-cell {
-            background: var(--bg-dark);
+        .notes-textarea-large {
+            width: 100%;
+            min-height: 600px;
+            background: var(--bg-secondary);
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent 29px,
+                rgba(255, 255, 255, 0.08) 29px,
+                rgba(255, 255, 255, 0.08) 30px
+            );
+            background-position-y: 12px;
             border: 2px solid var(--border);
             border-radius: 8px;
-            padding: 0.75rem;
-        }
-
-        .notes-cell textarea {
-            width: 100%;
-            min-height: 60px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.75rem;
+            padding: 0.75rem 1rem;
             color: var(--text-primary);
             font-family: 'Barlow Semi Condensed', sans-serif;
             font-size: 0.95rem;
+            line-height: 30px;
             resize: vertical;
         }
 
-        .notes-cell textarea:focus {
+        .notes-textarea-large:focus {
             outline: none;
             border-color: var(--accent);
         }
 
-        .notes-cell textarea::placeholder {
+        .notes-textarea-large::placeholder {
             color: var(--text-secondary);
             opacity: 0.6;
         }
@@ -3662,30 +3662,25 @@
             
             // Load notes from database
             const notes = await loadNotesFromDB(dateKey);
-            state.dailyNotes[dateKey] = notes;
             
-            // Generate 15 note cells
-            let notesHTML = '';
-            for (let i = 0; i < 15; i++) {
-                notesHTML += `
-                    <div class="notes-cell">
-                        <textarea 
-                            placeholder="Enter note..."
-                            onchange="updateNote(${i}, this.value)"
-                        >${state.dailyNotes[dateKey][i] || ''}</textarea>
-                    </div>
-                `;
+            // Convert old array format to single string if needed
+            if (Array.isArray(notes)) {
+                state.dailyNotes[dateKey] = notes.filter(n => n).join('\n');
+            } else {
+                state.dailyNotes[dateKey] = notes || '';
             }
             
-            notesGrid.innerHTML = notesHTML;
+            notesGrid.innerHTML = `
+                <textarea class="notes-textarea-large"
+                    placeholder="Enter notes for the day..."
+                    onchange="updateNote(this.value)"
+                >${state.dailyNotes[dateKey]}</textarea>
+            `;
         }
 
-        function updateNote(index, value) {
+        function updateNote(value) {
             const dateKey = state.scheduleDate;
-            if (!state.dailyNotes[dateKey]) {
-                state.dailyNotes[dateKey] = Array(15).fill('');
-            }
-            state.dailyNotes[dateKey][index] = value;
+            state.dailyNotes[dateKey] = value;
             
             // Save to database
             saveNotesToDB(dateKey, state.dailyNotes[dateKey]);
