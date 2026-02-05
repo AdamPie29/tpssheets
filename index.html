@@ -806,7 +806,7 @@
             border-radius: 8px;
         }
 
-        .desk-table input[type="time"].invalid-break {
+        .desk-table .time-input.invalid-break {
             background: rgba(239, 68, 68, 0.3) !important;
             border-color: #ef4444 !important;
         }
@@ -3273,12 +3273,11 @@
             const breakTimes = deskType === 'dispatch' ? state.breakTimes[deskNum] : state.callTakeBreakTimes[deskNum];
             const deskHours = deskType === 'dispatch' ? state.deskHours[deskNum] : state.callTakeDeskHours[deskNum];
             
-            if (!breakTimes || !deskHours) return;
+            if (!breakTimes || !deskHours || !deskHours.start || !deskHours.end) return;
             
-            // Get member info to check if callback
-            const allMembers = [...state.platoonMembers, ...state.additionalMembers];
-            const member = allMembers.find(m => m.id === memberId);
-            const isCallback = member && member.reason === 'callback';
+            // Get member info to check if callback (from additionalMembers which tracks CB/RDO)
+            const additionalMember = state.additionalMembers?.find(m => m.id === memberId);
+            const isCallback = additionalMember && additionalMember.reason === 'callback';
             
             // Calculate shift duration in hours
             const [startHour, startMin] = deskHours.start.split(':').map(Number);
@@ -3298,10 +3297,11 @@
             const row = document.querySelector(`#${tableId} tr[data-desk="${deskNum}"]`);
             if (!row) return;
             
-            // Get input elements
-            const break1Input = row.querySelector('input[type="time"][onchange*="break1"]');
-            const lunchInput = row.querySelector('input[type="time"][onchange*="lunch"]');
-            const break2Input = row.querySelector('input[type="time"][onchange*="break2"]');
+            // Get input elements - using .time-input class with onchange attribute
+            // Note: onchange uses single quotes inside, so we search for 'break1' etc.
+            const break1Input = row.querySelector(".time-input[onchange*=\"'break1'\"]");
+            const lunchInput = row.querySelector(".time-input[onchange*=\"'lunch'\"]");
+            const break2Input = row.querySelector(".time-input[onchange*=\"'break2'\"]");
             
             // Clear previous validation
             if (break1Input) break1Input.classList.remove('invalid-break');
@@ -3312,7 +3312,7 @@
                 // Callback shift validation
                 validateCallbackBreaks(breakTimes, shiftDurationHours, shiftStartMinutes, shiftEndMinutes, break1Input, lunchInput, break2Input);
             } else {
-                // Regular shift validation
+                // Regular shift validation (default when no member or non-callback member)
                 validateRegularShiftLunch(breakTimes, shiftStartMinutes, shiftEndMinutes, lunchInput);
             }
         }
@@ -4820,15 +4820,19 @@
             if (breakType === 'lunch' && state.breakTimes[deskNum].plus15Enabled) {
                 const plus15Time = addMinutes(value, 45);
                 state.breakTimes[deskNum].plus15 = plus15Time;
-                // Re-render the table to update the +15 min display
-                initializeDeskTable();
+                // Update the +15 display without re-rendering entire table
+                const row = document.querySelector(`#deskTableBody tr[data-desk="${deskNum}"]`);
+                if (row) {
+                    const plus15Display = row.querySelector('td:nth-child(8) div');
+                    if (plus15Display) {
+                        plus15Display.textContent = plus15Time;
+                    }
+                }
             }
             
-            // Validate break times
+            // Always validate break times (even without member for visual feedback)
             const memberId = state.assignments[deskNum];
-            if (memberId) {
-                validateBreakTimes(deskNum, 'dispatch', memberId);
-            }
+            validateBreakTimes(deskNum, 'dispatch', memberId);
         }
 
         function updateDeskHours(deskNum, timeType, value) {
@@ -4837,11 +4841,9 @@
             }
             state.deskHours[deskNum][timeType] = value;
             
-            // Validate break times when hours change
+            // Always validate break times when hours change
             const memberId = state.assignments[deskNum];
-            if (memberId) {
-                setTimeout(() => validateBreakTimes(deskNum, 'dispatch', memberId), 100);
-            }
+            setTimeout(() => validateBreakTimes(deskNum, 'dispatch', memberId), 100);
         }
 
         function handlePlus15Change(deskNum, value) {
@@ -4913,14 +4915,19 @@
             if (breakType === 'lunch' && state.callTakeBreakTimes[deskNum].plus15Enabled) {
                 const plus15Time = addMinutes(value, 45);
                 state.callTakeBreakTimes[deskNum].plus15 = plus15Time;
-                initializeCallTakeTable();
+                // Update the +15 display without re-rendering entire table
+                const row = document.querySelector(`#callTakeTableBody tr[data-desk="${deskNum}"]`);
+                if (row) {
+                    const plus15Display = row.querySelector('td:nth-child(8) div');
+                    if (plus15Display) {
+                        plus15Display.textContent = plus15Time;
+                    }
+                }
             }
             
-            // Validate break times
+            // Always validate break times (even without member for visual feedback)
             const memberId = state.callTakeAssignments[deskNum];
-            if (memberId) {
-                validateBreakTimes(deskNum, 'calltake', memberId);
-            }
+            validateBreakTimes(deskNum, 'calltake', memberId);
         }
 
         function updateCallTakeDeskHours(deskNum, timeType, value) {
@@ -4929,11 +4936,9 @@
             }
             state.callTakeDeskHours[deskNum][timeType] = value;
             
-            // Validate break times when hours change
+            // Always validate break times when hours change
             const memberId = state.callTakeAssignments[deskNum];
-            if (memberId) {
-                setTimeout(() => validateBreakTimes(deskNum, 'calltake', memberId), 100);
-            }
+            setTimeout(() => validateBreakTimes(deskNum, 'calltake', memberId), 100);
         }
 
         function handleCallTakePlus15Change(deskNum, value) {
