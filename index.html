@@ -3480,7 +3480,7 @@
             
             // Check reliever assignments for call take desks
             state.relieverDuties.forEach(reliever => {
-                if (!reliever.memberId) return;
+                if (!reliever.memberId || !reliever.schedule) return;
                 
                 const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                 const assignedDesk = reliever.schedule[timeKey];
@@ -7230,7 +7230,7 @@
                 // Check reliever duties for this schedule
                 if (schedule.relieverDuties) {
                     schedule.relieverDuties.forEach(reliever => {
-                        if (reliever.memberId) {
+                        if (reliever.memberId && reliever.schedule) {
                             // Format time as HHMM for lookup
                             const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                             const assignedDesk = reliever.schedule[timeKey];
