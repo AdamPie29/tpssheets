@@ -799,6 +799,29 @@
             opacity: 0.4;
         }
 
+        .member-chip.partial {
+            opacity: 0.7;
+            border-color: var(--accent);
+            background: rgba(217, 79, 42, 0.1);
+        }
+
+        .member-chip.partial::after {
+            content: 'SPLIT';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            background: var(--accent);
+            color: white;
+            padding: 0.15rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        .member-chip {
+            position: relative;
+        }
+
         .desk-table-container {
             overflow-x: auto;
             background: var(--bg-card);
@@ -3978,31 +4001,11 @@
                 return;
             }
             
-            // Check if member is already assigned elsewhere in call take desks and clear
-            Object.keys(state.callTakeAssignments).forEach(desk => {
-                if (state.callTakeAssignments[desk] === memberId && desk !== deskNum) {
-                    delete state.callTakeAssignments[desk];
-                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldInput) {
-                        oldInput.value = '';
-                        oldInput.classList.remove('has-assignment');
-                        oldInput.parentElement.classList.remove('has-value');
-                    }
-                }
-            });
-            
-            // Also check dispatch desks
-            Object.keys(state.assignments).forEach(desk => {
-                if (state.assignments[desk] === memberId) {
-                    delete state.assignments[desk];
-                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="dispatch"]`);
-                    if (oldInput) {
-                        oldInput.value = '';
-                        oldInput.classList.remove('has-assignment');
-                        oldInput.parentElement.classList.remove('has-value');
-                    }
-                }
-            });
+            // Check if member is already assigned to THIS SAME call take desk and clear (re-assignment to same desk)
+            // Note: We allow members to be assigned to multiple different desks for split shifts
+            if (state.callTakeAssignments[deskNum] === memberId) {
+                // Already assigned to this exact desk, nothing to do
+            }
             
             // Assign to new desk
             state.callTakeAssignments[deskNum] = memberId;
@@ -4063,10 +4066,26 @@
             };
             
             container.innerHTML = sortedMembers.map(member => {
-                const isAssignedDispatch = Object.values(state.assignments).includes(member.id);
-                const isAssignedCallTake = Object.values(state.callTakeAssignments).includes(member.id);
-                const isAssignedReliever = state.relieverDuties.some(r => r.memberId === member.id);
-                const isAssigned = isAssignedDispatch || isAssignedCallTake || isAssignedReliever;
+                // Count how many desks this member is assigned to
+                const dispatchAssignmentCount = Object.values(state.assignments).filter(id => id === member.id).length;
+                const callTakeAssignmentCount = Object.values(state.callTakeAssignments).filter(id => id === member.id).length;
+                const relieverAssignmentCount = state.relieverDuties.filter(r => r.memberId === member.id).length;
+                const totalAssignments = dispatchAssignmentCount + callTakeAssignmentCount + relieverAssignmentCount;
+                
+                // Determine assignment status
+                // "partial" = assigned to at least one desk but could take more (split shift)
+                // We'll show as partial if they have 1+ assignments
+                const isPartial = totalAssignments > 0;
+                
+                // Build assignment info text
+                let assignmentInfo = '';
+                if (totalAssignments > 0) {
+                    const parts = [];
+                    if (dispatchAssignmentCount > 0) parts.push(`${dispatchAssignmentCount} Disp`);
+                    if (callTakeAssignmentCount > 0) parts.push(`${callTakeAssignmentCount} CT`);
+                    if (relieverAssignmentCount > 0) parts.push(`${relieverAssignmentCount} Rel`);
+                    assignmentInfo = `<div style="font-size: 0.7rem; color: var(--accent); font-weight: 600; margin-top: 0.25rem;">Assigned: ${parts.join(', ')}</div>`;
+                }
                 
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
@@ -4075,12 +4094,13 @@
                     : '';
                 
                 return `
-                    <div class="member-chip ${isAssigned ? 'assigned' : ''}" 
+                    <div class="member-chip ${isPartial ? 'partial' : ''}" 
                          data-id="${member.id}"
                          style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
                         <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
                         <div style="font-size: 0.8rem; color: var(--text-secondary);">Platoon ${member.platoon} • Badge: ${member.badge}</div>
                         ${tagsHTML ? `<div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">${tagsHTML}</div>` : '<div style="font-size: 0.75rem; color: var(--text-secondary);">No certifications</div>'}
+                        ${assignmentInfo}
                     </div>
                 `;
             }).join('');
@@ -5141,32 +5161,8 @@
                 return;
             }
             
-            // Check if member is already assigned elsewhere (dispatch desks) and clear
-            Object.keys(state.assignments).forEach(desk => {
-                if (state.assignments[desk] === memberId && desk !== deskNum) {
-                    delete state.assignments[desk];
-                    // Clear that desk's input
-                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="dispatch"]`);
-                    if (oldInput) {
-                        oldInput.value = '';
-                        oldInput.classList.remove('has-assignment');
-                        oldInput.parentElement.classList.remove('has-value');
-                    }
-                }
-            });
-            
-            // Also check call take desks
-            Object.keys(state.callTakeAssignments).forEach(desk => {
-                if (state.callTakeAssignments[desk] === memberId) {
-                    delete state.callTakeAssignments[desk];
-                    const oldInput = document.querySelector(`.member-autocomplete[data-desk="${desk}"][data-type="calltake"]`);
-                    if (oldInput) {
-                        oldInput.value = '';
-                        oldInput.classList.remove('has-assignment');
-                        oldInput.parentElement.classList.remove('has-value');
-                    }
-                }
-            });
+            // Note: We allow members to be assigned to multiple different desks for split shifts
+            // No need to clear other assignments
             
             state.assignments[deskNum] = memberId;
             
