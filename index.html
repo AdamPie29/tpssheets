@@ -889,11 +889,45 @@
             color: #ec4899;
         }
 
-        /* Highlight spare desks that are commonly used as call take */
-        .spare-desk-indicator {
-            font-size: 0.65rem;
-            color: #ec4899;
-            font-weight: 600;
+        /* Special Situations Styles */
+        .special-situation-row .member-autocomplete-wrapper {
+            width: 100%;
+        }
+        
+        .special-situation-row .time-input {
+            width: 80px;
+        }
+        
+        .special-situation-row .situation-notes {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--primary-light);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            resize: none;
+            min-height: 38px;
+        }
+        
+        .special-situation-row .situation-notes:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .remove-situation-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            border-radius: 4px;
+            padding: 0.4rem 0.6rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .remove-situation-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
         }
 
         .desk-table {
@@ -2084,6 +2118,10 @@
                             The Count
                             <span class="nav-count" id="theCountStatus">Coverage Status</span>
                         </button>
+                        <button class="desk-nav-btn" id="navSpecialSituations" onclick="showDeskSection('specialsituations')">
+                            Special Situations
+                            <span class="nav-count" id="specialSituationsCount">0 entries</span>
+                        </button>
                         <button class="desk-nav-btn" id="navNotes" onclick="showDeskSection('notes')">
                             Notes
                             <span class="nav-count" id="notesCount">Daily Notes</span>
@@ -2181,6 +2219,36 @@
                                 
                                 <div class="count-table-container" style="margin-top: 2rem;">
                                     <div id="countTableGrid"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special Situations Section -->
+                        <div id="sectionSpecialSituations" class="desk-section">
+                            <div class="card">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <h2 class="card-title" style="margin: 0;">Special Situations</h2>
+                                    <button class="btn btn-primary" onclick="addSpecialSituationRow()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                                        + Add Row
+                                    </button>
+                                </div>
+                                <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                                    Track members temporarily removed from call take duties. These entries will be excluded from The Count during the specified time period.
+                                </p>
+                                <div class="desk-table-container">
+                                    <table class="desk-table" id="specialSituationsTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 200px;">Member</th>
+                                                <th style="width: 100px;">Leave At</th>
+                                                <th style="width: 100px;">Return At</th>
+                                                <th>Notes</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="specialSituationsBody">
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -2873,11 +2941,21 @@
                 if (schedule.relieverDuties && schedule.relieverDuties.length > 0) {
                     state.relieverDuties.push(...schedule.relieverDuties);
                 }
+                
+                // Merge special situations
+                if (schedule.specialSituations && schedule.specialSituations.length > 0) {
+                    state.specialSituations.push(...schedule.specialSituations);
+                }
             });
             
             // Update reliever ID counter
             if (state.relieverDuties.length > 0) {
                 relieverIdCounter = Math.max(...state.relieverDuties.map(r => r.id)) + 1;
+            }
+            
+            // Update special situation ID counter
+            if (state.specialSituations.length > 0) {
+                specialSituationIdCounter = Math.max(...state.specialSituations.map(s => s.id)) + 1;
             }
             
             // Update desk instance counter
@@ -2919,7 +2997,9 @@
             state.callTakeShiftTypes = {};
             state.callTakeDeskInstances = {};
             state.relieverDuties = [];
+            state.specialSituations = [];
             relieverIdCounter = 1;
+            specialSituationIdCounter = 1;
             deskInstanceCounter = 1;
             
             // Initialize desk statuses to true (working)
@@ -3047,6 +3127,7 @@
             callTakeShiftTypes: {}, // Track shift type per call take desk
             callTakeDeskInstances: {}, // Track multiple instances of same call take desk
             relieverDuties: [], // Array of reliever duty objects
+            specialSituations: [], // Array of special situation entries (members temporarily off call take)
             memberTagFilters: [], // For future filtering functionality
             calendarMonth: 0, // January 2026
             calendarYear: 2026,
@@ -3055,10 +3136,8 @@
         };
 
         let relieverIdCounter = 1;
+        let specialSituationIdCounter = 1;
         let deskInstanceCounter = 1; // Counter for unique desk instance IDs
-
-        // Spare dispatch desks commonly used as call take
-        const spareDispatchDesks = ['02', '05', '08', '09'];
 
         // Minimum call taker requirements for each 15-minute interval
         const minCallTakerRequirements = {
@@ -3352,7 +3431,211 @@
                 }
             });
             
-            return count;
+            // Subtract members in special situations during this time period
+            state.specialSituations.forEach(situation => {
+                if (!situation.memberId || !situation.leaveAt || !situation.returnAt) return;
+                
+                const [leaveHour, leaveMin] = situation.leaveAt.split(':').map(Number);
+                const [returnHour, returnMin] = situation.returnAt.split(':').map(Number);
+                
+                if (isNaN(leaveHour) || isNaN(leaveMin) || isNaN(returnHour) || isNaN(returnMin)) return;
+                
+                let leaveTime = leaveHour * 60 + leaveMin;
+                let returnTime = returnHour * 60 + returnMin;
+                
+                // Handle overnight situations
+                if (returnTime < leaveTime) {
+                    returnTime += 24 * 60;
+                }
+                
+                let adjustedCheckTime = checkTime;
+                if (returnTime >= 24 * 60 && adjustedCheckTime < leaveTime) {
+                    adjustedCheckTime += 24 * 60;
+                }
+                
+                // If current time is within the special situation period, subtract 1
+                if (adjustedCheckTime >= leaveTime && adjustedCheckTime < returnTime) {
+                    count--;
+                }
+            });
+            
+            // Ensure count doesn't go below 0
+            return Math.max(0, count);
+        }
+
+        // Special Situations Functions
+        function initializeSpecialSituationsTable() {
+            const tbody = document.getElementById('specialSituationsBody');
+            
+            // If no rows exist, create default 30 rows
+            if (state.specialSituations.length === 0) {
+                for (let i = 0; i < 30; i++) {
+                    state.specialSituations.push({
+                        id: specialSituationIdCounter++,
+                        memberId: null,
+                        leaveAt: '',
+                        returnAt: '',
+                        notes: ''
+                    });
+                }
+            }
+            
+            renderSpecialSituationsTable();
+        }
+
+        function renderSpecialSituationsTable() {
+            const tbody = document.getElementById('specialSituationsBody');
+            
+            tbody.innerHTML = state.specialSituations.map((situation, index) => {
+                const member = situation.memberId ? masterPersonnel.find(m => m.id === situation.memberId) : null;
+                const memberName = member ? member.name : '';
+                
+                return `
+                    <tr class="special-situation-row" data-situation-id="${situation.id}">
+                        <td>
+                            <div class="member-autocomplete-wrapper" data-situation="${situation.id}">
+                                <input type="text" class="member-autocomplete" data-situation="${situation.id}"
+                                       placeholder="Type surname..." 
+                                       value="${memberName}"
+                                       onfocus="showSpecialSituationAutocomplete(this, ${situation.id})"
+                                       oninput="filterSpecialSituationAutocomplete(this, ${situation.id})">
+                                <button class="clear-assignment-btn" onclick="clearSpecialSituationMember(${situation.id})" title="Clear member" style="${memberName ? '' : 'display: none;'}">×</button>
+                                <div class="autocomplete-dropdown" data-situation="${situation.id}"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
+                                   value="${situation.leaveAt}" 
+                                   onchange="updateSpecialSituation(${situation.id}, 'leaveAt', this.value)"
+                                   oninput="formatTimeInput(this)">
+                        </td>
+                        <td>
+                            <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
+                                   value="${situation.returnAt}" 
+                                   onchange="updateSpecialSituation(${situation.id}, 'returnAt', this.value)"
+                                   oninput="formatTimeInput(this)">
+                        </td>
+                        <td>
+                            <textarea class="situation-notes" placeholder="Add notes..."
+                                      onchange="updateSpecialSituation(${situation.id}, 'notes', this.value)">${situation.notes}</textarea>
+                        </td>
+                        <td>
+                            <button class="remove-situation-btn" onclick="removeSpecialSituationRow(${situation.id})" title="Remove row">×</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            updateNavCounts();
+        }
+
+        function addSpecialSituationRow() {
+            state.specialSituations.push({
+                id: specialSituationIdCounter++,
+                memberId: null,
+                leaveAt: '',
+                returnAt: '',
+                notes: ''
+            });
+            renderSpecialSituationsTable();
+        }
+
+        function removeSpecialSituationRow(situationId) {
+            state.specialSituations = state.specialSituations.filter(s => s.id !== situationId);
+            renderSpecialSituationsTable();
+            generateTheCount(); // Refresh The Count
+        }
+
+        function updateSpecialSituation(situationId, field, value) {
+            const situation = state.specialSituations.find(s => s.id === situationId);
+            if (situation) {
+                situation[field] = value;
+                generateTheCount(); // Refresh The Count when times change
+            }
+        }
+
+        function showSpecialSituationAutocomplete(input, situationId) {
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-situation="${situationId}"]`);
+            if (!dropdown) return;
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
+            
+            // Populate with all members
+            const members = masterPersonnel.sort((a, b) => a.name.localeCompare(b.name));
+            
+            dropdown.innerHTML = members.map(member => `
+                <div class="autocomplete-item" onclick="assignSpecialSituationMember(${situationId}, ${member.id})">
+                    <div class="autocomplete-name">${member.name}</div>
+                    <div class="autocomplete-badge">Platoon ${member.platoon}</div>
+                </div>
+            `).join('');
+            
+            dropdown.classList.add('show');
+        }
+
+        function filterSpecialSituationAutocomplete(input, situationId) {
+            const dropdown = document.querySelector(`.autocomplete-dropdown[data-situation="${situationId}"]`);
+            if (!dropdown) return;
+            
+            const searchTerm = input.value.toLowerCase();
+            const members = masterPersonnel
+                .filter(m => m.name.toLowerCase().includes(searchTerm))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            dropdown.innerHTML = members.map(member => `
+                <div class="autocomplete-item" onclick="assignSpecialSituationMember(${situationId}, ${member.id})">
+                    <div class="autocomplete-name">${member.name}</div>
+                    <div class="autocomplete-badge">Platoon ${member.platoon}</div>
+                </div>
+            `).join('');
+            
+            dropdown.classList.add('show');
+        }
+
+        function assignSpecialSituationMember(situationId, memberId) {
+            const situation = state.specialSituations.find(s => s.id === situationId);
+            if (situation) {
+                situation.memberId = memberId;
+                
+                // Update the input
+                const member = masterPersonnel.find(m => m.id === memberId);
+                const input = document.querySelector(`.member-autocomplete[data-situation="${situationId}"]`);
+                if (input && member) {
+                    input.value = member.name;
+                    input.classList.add('has-assignment');
+                    
+                    // Show the clear button
+                    const clearBtn = input.parentElement.querySelector('.clear-assignment-btn');
+                    if (clearBtn) clearBtn.style.display = '';
+                }
+                
+                // Close dropdown
+                document.querySelectorAll('.autocomplete-dropdown.show').forEach(d => d.classList.remove('show'));
+                
+                updateNavCounts();
+                generateTheCount(); // Refresh The Count
+            }
+        }
+
+        function clearSpecialSituationMember(situationId) {
+            const situation = state.specialSituations.find(s => s.id === situationId);
+            if (situation) {
+                situation.memberId = null;
+                
+                const input = document.querySelector(`.member-autocomplete[data-situation="${situationId}"]`);
+                if (input) {
+                    input.value = '';
+                    input.classList.remove('has-assignment');
+                    
+                    // Hide the clear button
+                    const clearBtn = input.parentElement.querySelector('.clear-assignment-btn');
+                    if (clearBtn) clearBtn.style.display = 'none';
+                }
+                
+                updateNavCounts();
+                generateTheCount(); // Refresh The Count
+            }
         }
 
         // Notes Functions
@@ -4340,7 +4623,6 @@
                             <option value="dispatch" ${(state.deskFunctions[deskNum] || 'dispatch') === 'dispatch' ? 'selected' : ''}>Disp</option>
                             <option value="calltake" ${state.deskFunctions[deskNum] === 'calltake' ? 'selected' : ''}>CT</option>
                         </select>
-                        ${spareDispatchDesks.includes(deskNum) ? '<div class="spare-desk-indicator">Spare</div>' : ''}
                     </td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -5432,6 +5714,7 @@
                     instances: JSON.parse(JSON.stringify(state.callTakeDeskInstances)) // Deep copy
                 },
                 relieverDuties: [...state.relieverDuties],
+                specialSituations: [...state.specialSituations.filter(s => s.memberId)], // Only save rows with members
                 additionalMembers: []
             };
             
@@ -5930,6 +6213,10 @@
                 document.getElementById('sectionTheCount').classList.add('active');
                 document.getElementById('navTheCount').classList.add('active');
                 generateTheCount();
+            } else if (section === 'specialsituations') {
+                document.getElementById('sectionSpecialSituations').classList.add('active');
+                document.getElementById('navSpecialSituations').classList.add('active');
+                initializeSpecialSituationsTable();
             } else if (section === 'notes') {
                 document.getElementById('sectionNotes').classList.add('active');
                 document.getElementById('navNotes').classList.add('active');
@@ -5949,6 +6236,10 @@
             // Update calltakers count
             const calltakersCount = Object.keys(state.callTakeAssignments).length;
             document.getElementById('calltakersCount').textContent = `${calltakersCount} assigned`;
+            
+            // Update special situations count
+            const specialSituationsCount = state.specialSituations.filter(s => s.memberId).length;
+            document.getElementById('specialSituationsCount').textContent = `${specialSituationsCount} entr${specialSituationsCount !== 1 ? 'ies' : 'y'}`;
         }
 
         function toggleRelievers() {
