@@ -864,6 +864,38 @@
             color: #d4a106;
         }
 
+        /* Desk Function Selector Styles */
+        .desk-func-select {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--primary-light);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-weight: 600;
+            min-width: 55px;
+        }
+        
+        .desk-func-select.func-dispatch {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+            color: #6366f1;
+        }
+        
+        .desk-func-select.func-calltake {
+            background: rgba(236, 72, 153, 0.2);
+            border-color: #ec4899;
+            color: #ec4899;
+        }
+
+        /* Highlight spare desks that are commonly used as call take */
+        .spare-desk-indicator {
+            font-size: 0.65rem;
+            color: #ec4899;
+            font-weight: 600;
+        }
+
         .desk-table {
             width: 100%;
             border-collapse: collapse;
@@ -2073,6 +2105,7 @@
                                                 <th>Position</th>
                                                 <th>Member</th>
                                                 <th style="width: 60px;">Type</th>
+                                                <th style="width: 60px;">Func</th>
                                                 <th>Hours</th>
                                                 <th>Break 1</th>
                                                 <th>Lunch</th>
@@ -2817,6 +2850,7 @@
                 Object.assign(state.breakTimes, schedule.dispatchDesks?.breakTimes || {});
                 Object.assign(state.deskStatus, schedule.dispatchDesks?.deskStatus || {});
                 Object.assign(state.shiftTypes, schedule.dispatchDesks?.shiftTypes || {});
+                Object.assign(state.deskFunctions, schedule.dispatchDesks?.deskFunctions || {});
                 
                 // Merge dispatch desk instances
                 if (schedule.dispatchDesks?.instances) {
@@ -2876,6 +2910,7 @@
             state.breakTimes = {};
             state.deskStatus = {};
             state.shiftTypes = {};
+            state.deskFunctions = {};
             state.deskInstances = {};
             state.callTakeAssignments = {};
             state.callTakeDeskHours = {};
@@ -3003,6 +3038,7 @@
             deskHours: {},
             deskStatus: {}, // Track desk working status: true = working, false = broken
             shiftTypes: {}, // Track shift type per desk: 'regular', 'callback'
+            deskFunctions: {}, // Track desk function: 'dispatch' or 'calltake' (for spare desks used as CT)
             deskInstances: {}, // Track multiple instances of same desk (e.g., 01: [{id: '01-1', ...}, {id: '01-2', ...}])
             callTakeAssignments: {},
             callTakeBreakTimes: {},
@@ -3020,6 +3056,9 @@
 
         let relieverIdCounter = 1;
         let deskInstanceCounter = 1; // Counter for unique desk instance IDs
+
+        // Spare dispatch desks commonly used as call take
+        const spareDispatchDesks = ['02', '05', '08', '09'];
 
         // Minimum call taker requirements for each 15-minute interval
         const minCallTakerRequirements = {
@@ -3219,6 +3258,76 @@
                 }
             });
             
+            // Check dispatch desks that are functioning as call take (Func = CT)
+            Object.keys(state.assignments).forEach(deskNum => {
+                const memberId = state.assignments[deskNum];
+                if (!memberId) return;
+                
+                // Only count if desk function is set to 'calltake'
+                if (state.deskFunctions[deskNum] !== 'calltake') return;
+                
+                const deskHours = state.deskHours[deskNum];
+                const breakTimes = state.breakTimes[deskNum];
+                
+                if (!deskHours) return;
+                
+                const [startHour, startMin] = deskHours.start.split(':').map(Number);
+                const [endHour, endMin] = deskHours.end.split(':').map(Number);
+                let startTime = startHour * 60 + startMin;
+                let endTime = endHour * 60 + endMin;
+                
+                // Handle overnight shifts
+                let adjustedCheckTime = checkTime;
+                if (endTime < startTime) {
+                    endTime += 24 * 60;
+                    if (adjustedCheckTime < startTime) {
+                        adjustedCheckTime += 24 * 60;
+                    }
+                }
+                
+                // Check if within working hours
+                if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
+                    let onBreak = false;
+                    
+                    if (breakTimes) {
+                        // Check Break 1 (15 minutes)
+                        if (breakTimes.break1) {
+                            const [b1Hour, b1Min] = breakTimes.break1.split(':').map(Number);
+                            const break1Start = b1Hour * 60 + b1Min;
+                            const break1End = break1Start + 15;
+                            if (checkTime >= break1Start && checkTime < break1End) {
+                                onBreak = true;
+                            }
+                        }
+                        
+                        // Check Lunch (45 minutes, or 60 if +15 enabled)
+                        if (breakTimes.lunch && breakTimes.tibOption === 'na') {
+                            const [lunchHour, lunchMin] = breakTimes.lunch.split(':').map(Number);
+                            const lunchStart = lunchHour * 60 + lunchMin;
+                            const lunchDuration = breakTimes.plus15Enabled ? 60 : 45;
+                            const lunchEnd = lunchStart + lunchDuration;
+                            if (checkTime >= lunchStart && checkTime < lunchEnd) {
+                                onBreak = true;
+                            }
+                        }
+                        
+                        // Check Break 2 (15 minutes)
+                        if (breakTimes.break2) {
+                            const [b2Hour, b2Min] = breakTimes.break2.split(':').map(Number);
+                            const break2Start = b2Hour * 60 + b2Min;
+                            const break2End = break2Start + 15;
+                            if (checkTime >= break2Start && checkTime < break2End) {
+                                onBreak = true;
+                            }
+                        }
+                    }
+                    
+                    if (!onBreak) {
+                        count++;
+                    }
+                }
+            });
+            
             // Check reliever assignments for call take desks
             state.relieverDuties.forEach(reliever => {
                 if (!reliever.memberId) return;
@@ -3231,6 +3340,14 @@
                     // Check if assigned to a call take desk (PC prefix)
                     if (deskUpper.startsWith('PC') || callTakeLabels.includes(deskUpper)) {
                         count++;
+                    }
+                    // Also check if assigned to a dispatch desk that's functioning as call take
+                    const dispatchMatch = deskUpper.match(/(?:PD)?(\d{2})/);
+                    if (dispatchMatch) {
+                        const dispatchDeskNum = dispatchMatch[1];
+                        if (state.deskFunctions[dispatchDeskNum] === 'calltake') {
+                            count++;
+                        }
                     }
                 }
             });
@@ -4218,6 +4335,14 @@
                         </select>
                     </td>
                     <td>
+                        <select class="desk-func-select ${getDeskFuncClass(state.deskFunctions[deskNum] || 'dispatch')}" 
+                                onchange="updateDeskFunction('${deskNum}', this.value)">
+                            <option value="dispatch" ${(state.deskFunctions[deskNum] || 'dispatch') === 'dispatch' ? 'selected' : ''}>Disp</option>
+                            <option value="calltake" ${state.deskFunctions[deskNum] === 'calltake' ? 'selected' : ''}>CT</option>
+                        </select>
+                        ${spareDispatchDesks.includes(deskNum) ? '<div class="spare-desk-indicator">Spare</div>' : ''}
+                    </td>
+                    <td>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
                                    value="${state.deskHours[deskNum]?.start || defaultStart}" 
@@ -4909,7 +5034,30 @@
             validateBreakTimes(deskNum, deskType, memberId);
         }
 
-        // Get member's expected status for a given date based on platoon rotation
+        // Desk Function Helper Functions
+        function getDeskFuncClass(deskFunc) {
+            switch(deskFunc) {
+                case 'calltake': return 'func-calltake';
+                default: return 'func-dispatch';
+            }
+        }
+
+        function updateDeskFunction(deskNum, deskFunc) {
+            state.deskFunctions[deskNum] = deskFunc;
+            
+            // Update the select element styling
+            const row = document.querySelector(`#deskTableBody tr[data-desk="${deskNum}"]`);
+            if (row) {
+                const select = row.querySelector('.desk-func-select');
+                if (select) {
+                    select.className = `desk-func-select ${getDeskFuncClass(deskFunc)}`;
+                }
+            }
+            
+            // Regenerate The Count to reflect the change
+            generateTheCount();
+        }
+
         function updateBreakTime(deskNum, breakType, value) {
             if (!state.breakTimes[deskNum]) {
                 state.breakTimes[deskNum] = {};
@@ -5272,6 +5420,7 @@
                     deskStatus: { ...state.deskStatus },
                     breakTimes: { ...state.breakTimes },
                     shiftTypes: { ...state.shiftTypes },
+                    deskFunctions: { ...state.deskFunctions },
                     instances: JSON.parse(JSON.stringify(state.deskInstances)) // Deep copy
                 },
                 callTakeDesks: {
