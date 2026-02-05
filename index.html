@@ -6251,68 +6251,66 @@
         function getDeskAgents(deskType, deskNum, hour, minute) {
             const agents = [];
             
-            // Check current schedule assignments
-            if (deskType === 'dispatch') {
-                const memberId = state.assignments[deskNum];
-                if (memberId) {
-                    const deskHours = state.deskHours[deskNum];
-                    const breakTimes = state.breakTimes[deskNum];
-                    
-                    if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
-                        const member = [...state.platoonMembers, ...state.additionalMembers].find(m => m.id === memberId);
-                        if (member) {
-                            // Get last name and first initial (format: "Last, First" -> "Last, F.")
-                            const nameParts = member.name.split(',');
-                            const lastName = nameParts[0].trim();
-                            const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                            agents.push(`${lastName}, ${firstInitial}`);
-                        }
-                    }
-                }
-            } else if (deskType === 'calltake') {
-                const memberId = state.callTakeAssignments[deskNum];
-                if (memberId) {
-                    const deskHours = state.callTakeDeskHours[deskNum];
-                    const breakTimes = state.callTakeBreakTimes[deskNum];
-                    
-                    if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
-                        const member = [...state.platoonMembers, ...state.additionalMembers].find(m => m.id === memberId);
-                        if (member) {
-                            const nameParts = member.name.split(',');
-                            const lastName = nameParts[0].trim();
-                            const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                            agents.push(`${lastName}, ${firstInitial}`);
-                        }
-                    }
-                }
-            }
+            // Get the selected date for filtering
+            const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
             
-            // Check reliever assignments
-            state.relieverDuties.forEach(reliever => {
-                if (!reliever.memberId) return;
+            // Loop through saved schedules, filtering by selected date
+            Object.keys(state.openSeatingData).forEach(key => {
+                const schedule = state.openSeatingData[key];
+                if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
                 
-                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
-                const assignedDesk = reliever.schedule[timeKey];
+                // Only show schedules for the selected date
+                if (schedule.date !== selectedDate) return;
                 
-                if (assignedDesk) {
-                    const deskUpper = assignedDesk.toUpperCase();
-                    
-                    if (deskType === 'dispatch') {
-                        const match = deskUpper.match(/(?:PD)?(\d{2})/);
-                        if (match && match[1] === deskNum) {
-                            const member = masterPersonnel.find(m => m.id === reliever.memberId);
+                if (deskType === 'dispatch') {
+                    const memberId = schedule.dispatchDesks.assignments?.[deskNum];
+                    if (memberId) {
+                        const deskHours = schedule.dispatchDesks.deskHours?.[deskNum];
+                        const breakTimes = schedule.dispatchDesks.breakTimes?.[deskNum];
+                        
+                        if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
+                            const member = masterPersonnel.find(m => m.id === memberId);
                             if (member) {
+                                // Get last name and first initial (format: "Last, First" -> "Last, F.")
                                 const nameParts = member.name.split(',');
                                 const lastName = nameParts[0].trim();
                                 const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
                                 agents.push(`${lastName}, ${firstInitial}`);
                             }
                         }
-                    } else if (deskType === 'calltake') {
-                        const ctIndex = parseInt(deskNum.substring(2)) - 1;
-                        const expectedLabel = callTakeLabels[ctIndex];
-                        if (deskUpper === expectedLabel) {
-                            const member = masterPersonnel.find(m => m.id === reliever.memberId);
+                    }
+                    
+                    // Also check desk instances
+                    if (schedule.dispatchDesks.instances) {
+                        const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
+                        const instances = schedule.dispatchDesks.instances[baseDeskNum] || [];
+                        instances.forEach(instance => {
+                            if (instance.memberId) {
+                                const instHours = instance.hours;
+                                const instBreaks = instance.breakTimes;
+                                
+                                if (isAgentAtDesk(instance.memberId, instHours, instBreaks, hour, minute)) {
+                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
+                                    if (member) {
+                                        const nameParts = member.name.split(',');
+                                        const lastName = nameParts[0].trim();
+                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
+                                            agents.push(`${lastName}, ${firstInitial}`);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } else if (deskType === 'calltake') {
+                    const memberId = schedule.callTakeDesks.assignments?.[deskNum];
+                    if (memberId) {
+                        const deskHours = schedule.callTakeDesks.deskHours?.[deskNum];
+                        const breakTimes = schedule.callTakeDesks.breakTimes?.[deskNum];
+                        
+                        if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
+                            const member = masterPersonnel.find(m => m.id === memberId);
                             if (member) {
                                 const nameParts = member.name.split(',');
                                 const lastName = nameParts[0].trim();
@@ -6321,6 +6319,73 @@
                             }
                         }
                     }
+                    
+                    // Also check desk instances
+                    if (schedule.callTakeDesks.instances) {
+                        const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
+                        const instances = schedule.callTakeDesks.instances[baseDeskNum] || [];
+                        instances.forEach(instance => {
+                            if (instance.memberId) {
+                                const instHours = instance.hours;
+                                const instBreaks = instance.breakTimes;
+                                
+                                if (isAgentAtDesk(instance.memberId, instHours, instBreaks, hour, minute)) {
+                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
+                                    if (member) {
+                                        const nameParts = member.name.split(',');
+                                        const lastName = nameParts[0].trim();
+                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
+                                            agents.push(`${lastName}, ${firstInitial}`);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                // Check reliever assignments from saved schedule
+                if (schedule.relieverDuties) {
+                    schedule.relieverDuties.forEach(reliever => {
+                        if (!reliever.memberId || !reliever.schedule) return;
+                        
+                        const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                        const assignedDesk = reliever.schedule[timeKey];
+                        
+                        if (assignedDesk) {
+                            const deskUpper = assignedDesk.toUpperCase();
+                            
+                            if (deskType === 'dispatch') {
+                                const match = deskUpper.match(/(?:PD)?(\d{2})/);
+                                if (match && match[1] === deskNum) {
+                                    const member = masterPersonnel.find(m => m.id === reliever.memberId);
+                                    if (member) {
+                                        const nameParts = member.name.split(',');
+                                        const lastName = nameParts[0].trim();
+                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
+                                            agents.push(`${lastName}, ${firstInitial}`);
+                                        }
+                                    }
+                                }
+                            } else if (deskType === 'calltake') {
+                                const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                const expectedLabel = callTakeLabels[ctIndex];
+                                if (deskUpper === expectedLabel || deskUpper === deskNum) {
+                                    const member = masterPersonnel.find(m => m.id === reliever.memberId);
+                                    if (member) {
+                                        const nameParts = member.name.split(',');
+                                        const lastName = nameParts[0].trim();
+                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
+                                            agents.push(`${lastName}, ${firstInitial}`);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
                 }
             });
             
