@@ -774,25 +774,28 @@
 
         .members-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0.5rem;
+            padding: 0.5rem;
         }
 
         .member-chip {
             background: var(--bg-dark);
-            border: 2px solid var(--border);
+            border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 0.75rem;
+            padding: 0.5rem 0.65rem;
             font-weight: 600;
             text-align: left;
             transition: all 0.2s ease;
-            min-height: 100px;
             display: flex;
             flex-direction: column;
+            gap: 0.25rem;
+            position: relative;
         }
 
         .member-chip:hover {
             border-color: var(--accent);
+            background: rgba(217, 79, 42, 0.04);
         }
 
         .member-chip.assigned {
@@ -810,16 +813,58 @@
             position: absolute;
             top: 4px;
             right: 4px;
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             font-weight: 700;
             background: var(--accent);
             color: white;
-            padding: 0.15rem 0.3rem;
+            padding: 0.1rem 0.25rem;
             border-radius: 3px;
+            letter-spacing: 0.5px;
         }
 
-        .member-chip {
-            position: relative;
+        .member-chip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 0.5rem;
+        }
+
+        .member-chip-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .member-chip-meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+
+        .member-chip-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+        }
+
+        .member-chip-tags .personnel-tag {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .member-chip-assignment {
+            font-size: 0.65rem;
+            color: var(--accent);
+            font-weight: 600;
         }
 
         .desk-table-container {
@@ -1988,7 +2033,7 @@
             }
 
             .members-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             }
         }
     </style>
@@ -4467,34 +4512,31 @@
                 const relieverAssignmentCount = state.relieverDuties.filter(r => r.memberId === member.id).length;
                 const totalAssignments = dispatchAssignmentCount + callTakeAssignmentCount + relieverAssignmentCount;
                 
-                // Determine assignment status
-                // "partial" = assigned to at least one desk but could take more (split shift)
-                // We'll show as partial if they have 1+ assignments
                 const isPartial = totalAssignments > 0;
                 
-                // Build assignment info text
+                // Build assignment info
                 let assignmentInfo = '';
                 if (totalAssignments > 0) {
                     const parts = [];
                     if (dispatchAssignmentCount > 0) parts.push(`${dispatchAssignmentCount} Disp`);
                     if (callTakeAssignmentCount > 0) parts.push(`${callTakeAssignmentCount} CT`);
                     if (relieverAssignmentCount > 0) parts.push(`${relieverAssignmentCount} Rel`);
-                    assignmentInfo = `<div style="font-size: 0.7rem; color: var(--accent); font-weight: 600; margin-top: 0.25rem;">Assigned: ${parts.join(', ')}</div>`;
+                    assignmentInfo = `<div class="member-chip-assignment">${parts.join(' · ')}</div>`;
                 }
                 
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
-                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">${tag}</span>`
+                        `<span class="personnel-tag ${tagClasses[tag]}">${tag}</span>`
                       ).join('')
                     : '';
                 
                 return `
-                    <div class="member-chip ${isPartial ? 'partial' : ''}" 
-                         data-id="${member.id}"
-                         style="display: flex; flex-direction: column; gap: 0.4rem; padding: 0.75rem;">
-                        <div style="font-weight: 600; font-size: 0.95rem;">${member.name}</div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Platoon ${member.platoon} • Badge: ${member.badge}</div>
-                        ${tagsHTML ? `<div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">${tagsHTML}</div>` : '<div style="font-size: 0.75rem; color: var(--text-secondary);">No certifications</div>'}
+                    <div class="member-chip ${isPartial ? 'partial' : ''}" data-id="${member.id}">
+                        <div class="member-chip-header">
+                            <span class="member-chip-name">${member.name}</span>
+                            <span class="member-chip-meta">${member.platoon} · ${member.badge}</span>
+                        </div>
+                        ${tagsHTML ? `<div class="member-chip-tags">${tagsHTML}</div>` : ''}
                         ${assignmentInfo}
                     </div>
                 `;
