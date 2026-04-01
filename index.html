@@ -2174,6 +2174,93 @@
             padding: 0.5rem;
         }
 
+        /* Find Hours Chart Styles */
+        .find-hours-chart-container {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3rem;
+        }
+
+        .find-hours-chart {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .find-hours-chart svg {
+            transform: rotate(-90deg);
+        }
+
+        .find-hours-chart-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .find-hours-chart-total {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .find-hours-chart-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .find-hours-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .find-hours-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .find-hours-legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .find-hours-legend-color.dispatch {
+            background: var(--accent);
+        }
+
+        .find-hours-legend-color.calltake {
+            background: #10b981;
+        }
+
+        .find-hours-legend-color.other {
+            background: #8b5cf6;
+        }
+
+        .find-hours-legend-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .find-hours-legend-type {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .find-hours-legend-hours {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -4148,9 +4235,11 @@
             const toDate = document.getElementById('findToDate').value;
             
             let datesToSearch = [];
+            let isDateRange = false;
             
             if (singleDate) {
                 datesToSearch = [singleDate];
+                isDateRange = false;
             } else if (fromDate && toDate) {
                 // Generate array of dates between from and to
                 const start = new Date(fromDate + 'T12:00:00');
@@ -4166,6 +4255,7 @@
                     datesToSearch.push(current.toISOString().split('T')[0]);
                     current.setDate(current.getDate() + 1);
                 }
+                isDateRange = true;
             } else {
                 alert('Please select a single date or a date range.');
                 return;
@@ -4173,7 +4263,7 @@
             
             // Search for member assignments in the date range
             const results = searchMemberAssignments(selectedFindMember.id, datesToSearch);
-            displayFindResults(results, selectedFindMember);
+            displayFindResults(results, selectedFindMember, isDateRange);
         }
 
         function searchMemberAssignments(memberId, dates) {
@@ -4325,7 +4415,7 @@
             return parts.length > 0 ? parts.join(', ') : 'None';
         }
 
-        function displayFindResults(results, member) {
+        function displayFindResults(results, member, isDateRange = false) {
             const container = document.getElementById('findResults');
             const noResults = document.getElementById('findNoResults');
             
@@ -4340,6 +4430,16 @@
             }
             
             noResults.style.display = 'none';
+            
+            // If date range, calculate and show hours split chart
+            if (isDateRange && results.length > 1) {
+                const hoursSummary = calculateHoursSummary(results);
+                if (hoursSummary.total > 0) {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.innerHTML = renderHoursChart(hoursSummary);
+                    container.appendChild(chartDiv.firstElementChild);
+                }
+            }
             
             results.forEach(result => {
                 const card = document.createElement('div');
@@ -4382,6 +4482,162 @@
                 card.innerHTML = cardHTML;
                 container.appendChild(card);
             });
+        }
+
+        function calculateHoursSummary(results) {
+            let dispatchMinutes = 0;
+            let calltakeMinutes = 0;
+            let otherMinutes = 0;
+            
+            results.forEach(result => {
+                result.assignments.forEach(assignment => {
+                    const minutes = parseHoursToMinutes(assignment.hours);
+                    
+                    if (assignment.deskFunction === 'dispatch' || assignment.type === 'Dispatch') {
+                        // Check if it's actually a CT function on a dispatch desk
+                        if (assignment.deskFunction === 'calltake') {
+                            calltakeMinutes += minutes;
+                        } else {
+                            dispatchMinutes += minutes;
+                        }
+                    } else if (assignment.deskFunction === 'calltake' || assignment.type === 'Call Take') {
+                        calltakeMinutes += minutes;
+                    } else {
+                        // Relievers, SOS, OS, etc.
+                        otherMinutes += minutes;
+                    }
+                });
+            });
+            
+            return {
+                dispatch: dispatchMinutes / 60,
+                calltake: calltakeMinutes / 60,
+                other: otherMinutes / 60,
+                total: (dispatchMinutes + calltakeMinutes + otherMinutes) / 60
+            };
+        }
+
+        function parseHoursToMinutes(hoursStr) {
+            if (!hoursStr || hoursStr === 'N/A') return 0;
+            
+            const match = hoursStr.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+            if (!match) return 0;
+            
+            const startHour = parseInt(match[1]);
+            const startMin = parseInt(match[2]);
+            const endHour = parseInt(match[3]);
+            const endMin = parseInt(match[4]);
+            
+            let startTotal = startHour * 60 + startMin;
+            let endTotal = endHour * 60 + endMin;
+            
+            // Handle overnight shifts
+            if (endTotal < startTotal) {
+                endTotal += 24 * 60;
+            }
+            
+            return endTotal - startTotal;
+        }
+
+        function renderHoursChart(summary) {
+            const { dispatch, calltake, other, total } = summary;
+            
+            // Calculate percentages
+            const dispatchPct = total > 0 ? (dispatch / total) * 100 : 0;
+            const calltakePct = total > 0 ? (calltake / total) * 100 : 0;
+            const otherPct = total > 0 ? (other / total) * 100 : 0;
+            
+            // SVG circle parameters
+            const radius = 70;
+            const circumference = 2 * Math.PI * radius;
+            
+            // Calculate stroke dash arrays for each segment
+            const dispatchDash = (dispatchPct / 100) * circumference;
+            const calltakeDash = (calltakePct / 100) * circumference;
+            const otherDash = (otherPct / 100) * circumference;
+            
+            // Calculate offsets (cumulative)
+            const dispatchOffset = 0;
+            const calltakeOffset = -dispatchDash;
+            const otherOffset = -(dispatchDash + calltakeDash);
+            
+            // Format hours for display
+            const formatHours = (hrs) => {
+                const h = Math.floor(hrs);
+                const m = Math.round((hrs - h) * 60);
+                return m > 0 ? `${h}h ${m}m` : `${h}h`;
+            };
+            
+            return `
+                <div class="find-hours-chart-container">
+                    <div class="find-hours-chart">
+                        <svg width="180" height="180" viewBox="0 0 180 180">
+                            <!-- Background circle -->
+                            <circle cx="90" cy="90" r="${radius}" fill="none" stroke="var(--bg-secondary)" stroke-width="20"/>
+                            
+                            <!-- Dispatch segment -->
+                            ${dispatch > 0 ? `
+                            <circle cx="90" cy="90" r="${radius}" fill="none" 
+                                    stroke="var(--accent)" stroke-width="20"
+                                    stroke-dasharray="${dispatchDash} ${circumference}"
+                                    stroke-dashoffset="${dispatchOffset}"/>
+                            ` : ''}
+                            
+                            <!-- Call Take segment -->
+                            ${calltake > 0 ? `
+                            <circle cx="90" cy="90" r="${radius}" fill="none" 
+                                    stroke="#10b981" stroke-width="20"
+                                    stroke-dasharray="${calltakeDash} ${circumference}"
+                                    stroke-dashoffset="${calltakeOffset}"/>
+                            ` : ''}
+                            
+                            <!-- Other segment -->
+                            ${other > 0 ? `
+                            <circle cx="90" cy="90" r="${radius}" fill="none" 
+                                    stroke="#8b5cf6" stroke-width="20"
+                                    stroke-dasharray="${otherDash} ${circumference}"
+                                    stroke-dashoffset="${otherOffset}"/>
+                            ` : ''}
+                        </svg>
+                        <div class="find-hours-chart-center">
+                            <div class="find-hours-chart-total">${formatHours(total)}</div>
+                            <div class="find-hours-chart-label">Total Hours</div>
+                        </div>
+                    </div>
+                    
+                    <div class="find-hours-legend">
+                        ${dispatch > 0 ? `
+                        <div class="find-hours-legend-item">
+                            <div class="find-hours-legend-color dispatch"></div>
+                            <div class="find-hours-legend-text">
+                                <span class="find-hours-legend-type">Dispatch</span>
+                                <span class="find-hours-legend-hours">${formatHours(dispatch)} (${dispatchPct.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${calltake > 0 ? `
+                        <div class="find-hours-legend-item">
+                            <div class="find-hours-legend-color calltake"></div>
+                            <div class="find-hours-legend-text">
+                                <span class="find-hours-legend-type">Call Take</span>
+                                <span class="find-hours-legend-hours">${formatHours(calltake)} (${calltakePct.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${other > 0 ? `
+                        <div class="find-hours-legend-item">
+                            <div class="find-hours-legend-color other"></div>
+                            <div class="find-hours-legend-text">
+                                <span class="find-hours-legend-type">Other</span>
+                                <span class="find-hours-legend-hours">${formatHours(other)} (${otherPct.toFixed(1)}%)</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
         }
 
         // SOS/OS Functions
