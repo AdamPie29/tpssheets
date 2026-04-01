@@ -3049,6 +3049,10 @@
                     <input type="checkbox" id="applyToCallTake" checked>
                     <span>Apply to Call Take Desks</span>
                 </label>
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="applyToRelievers" checked>
+                    <span>Apply Relievers</span>
+                </label>
             </div>
             
             <div class="template-preview" id="templatePreview" style="display: none;">
@@ -3094,6 +3098,10 @@
                 <label class="template-option-checkbox">
                     <input type="checkbox" id="saveCallTakeTemplate" checked>
                     <span>Include Call Take Desks</span>
+                </label>
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="saveRelieversTemplate" checked>
+                    <span>Include Relievers</span>
                 </label>
             </div>
             
@@ -5002,6 +5010,8 @@
                     scheduleTemplates = stored ? JSON.parse(stored) : [];
                 } else {
                     scheduleTemplates = data || [];
+                    // Sync localStorage with DB data
+                    localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
                 }
             } catch (err) {
                 console.error('Error loading templates:', err);
@@ -5026,14 +5036,17 @@
                     .single();
                 
                 if (error) {
-                    console.error('Error saving template:', error);
+                    console.error('Error saving template to Supabase:', error);
                     // Fallback to localStorage
                     scheduleTemplates.push(template);
                     localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
                     return template;
                 }
                 
+                // Add the returned data (with any DB-generated fields) to local array
                 scheduleTemplates.push(data);
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                console.log('Template saved to Supabase:', data.id);
                 return data;
             } catch (err) {
                 console.error('Error saving template:', err);
@@ -5044,13 +5057,14 @@
         }
 
         async function updateTemplateInDB(templateId, updates) {
+            // Update local array first
+            const idx = scheduleTemplates.findIndex(t => String(t.id) === String(templateId));
+            if (idx !== -1) {
+                scheduleTemplates[idx] = { ...scheduleTemplates[idx], ...updates };
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+            }
+            
             if (!supabase) {
-                // Update in localStorage
-                const idx = scheduleTemplates.findIndex(t => t.id === templateId);
-                if (idx !== -1) {
-                    scheduleTemplates[idx] = { ...scheduleTemplates[idx], ...updates };
-                    localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
-                }
                 return;
             }
             
@@ -5061,13 +5075,9 @@
                     .eq('id', templateId);
                 
                 if (error) {
-                    console.error('Error updating template:', error);
-                }
-                
-                // Update local array
-                const idx = scheduleTemplates.findIndex(t => t.id === templateId);
-                if (idx !== -1) {
-                    scheduleTemplates[idx] = { ...scheduleTemplates[idx], ...updates };
+                    console.error('Error updating template in Supabase:', error);
+                } else {
+                    console.log('Template updated in Supabase:', templateId);
                 }
             } catch (err) {
                 console.error('Error updating template:', err);
@@ -5075,10 +5085,16 @@
         }
 
         async function deleteTemplateFromDB(templateId) {
+            // Always remove from local array first
+            const initialLength = scheduleTemplates.length;
+            scheduleTemplates = scheduleTemplates.filter(t => String(t.id) !== String(templateId));
+            
+            // Update localStorage
+            localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+            
+            console.log(`Deleted template ${templateId}. Array length: ${initialLength} -> ${scheduleTemplates.length}`);
+            
             if (!supabase) {
-                // Delete from localStorage
-                scheduleTemplates = scheduleTemplates.filter(t => t.id !== templateId);
-                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
                 return;
             }
             
@@ -5089,11 +5105,10 @@
                     .eq('id', templateId);
                 
                 if (error) {
-                    console.error('Error deleting template:', error);
+                    console.error('Error deleting template from Supabase:', error);
+                } else {
+                    console.log('Template deleted from Supabase:', templateId);
                 }
-                
-                // Remove from local array
-                scheduleTemplates = scheduleTemplates.filter(t => t.id !== templateId);
             } catch (err) {
                 console.error('Error deleting template:', err);
             }
@@ -5117,6 +5132,7 @@
             document.getElementById('templateDescription').value = '';
             document.getElementById('saveDispatchTemplate').checked = true;
             document.getElementById('saveCallTakeTemplate').checked = true;
+            document.getElementById('saveRelieversTemplate').checked = true;
             document.getElementById('saveTemplateModal').classList.add('active');
         }
 
@@ -5158,6 +5174,7 @@
                     Object.values(template.dispatch_instances).reduce((sum, arr) => sum + arr.length, 0) : 0;
                 const callTakeInstanceCount = template.calltake_instances ? 
                     Object.values(template.calltake_instances).reduce((sum, arr) => sum + arr.length, 0) : 0;
+                const relieverCount = template.relievers ? template.relievers.length : 0;
                 const createdDate = template.created_at ? new Date(template.created_at).toLocaleDateString() : '';
                 
                 return `
@@ -5172,6 +5189,7 @@
                                 ${(dispatchCount > 0 || dispatchInstanceCount > 0) && (callTakeCount > 0 || callTakeInstanceCount > 0) ? ' · ' : ''}
                                 ${callTakeCount > 0 ? `${callTakeCount} call take desks` : ''}
                                 ${callTakeInstanceCount > 0 ? ` (+${callTakeInstanceCount} instances)` : ''}
+                                ${relieverCount > 0 ? ` · ${relieverCount} reliever${relieverCount !== 1 ? 's' : ''}` : ''}
                                 ${createdDate ? ` · Created ${createdDate}` : ''}
                             </div>
                         </div>
@@ -5244,6 +5262,26 @@
                 }
             }
             
+            // Show relievers
+            if (template.relievers && template.relievers.length > 0) {
+                previewHTML += `<div class="template-preview-item" style="margin-top: 0.5rem; border-top: 1px solid var(--border); padding-top: 0.5rem;"><strong style="color: var(--accent-light);">Relievers:</strong></div>`;
+                
+                const relieversToShow = template.relievers.slice(0, 3);
+                relieversToShow.forEach(reliever => {
+                    const scheduleSlots = reliever.schedule ? Object.keys(reliever.schedule).filter(k => reliever.schedule[k]).length : 0;
+                    previewHTML += `
+                        <div class="template-preview-item">
+                            <span class="template-preview-desk">Reliever ${reliever.relieverNum}:</span>
+                            ${reliever.hours?.start || '?'} - ${reliever.hours?.end || '?'} (${scheduleSlots} slots)
+                        </div>
+                    `;
+                });
+                
+                if (template.relievers.length > 3) {
+                    previewHTML += `<div class="template-preview-item" style="color: var(--text-secondary);">... and ${template.relievers.length - 3} more relievers</div>`;
+                }
+            }
+            
             previewGrid.innerHTML = previewHTML || '<div style="color: var(--text-secondary);">No desk configurations in this template</div>';
             previewContainer.style.display = 'block';
         }
@@ -5253,14 +5291,15 @@
             const description = document.getElementById('templateDescription').value.trim();
             const includeDispatch = document.getElementById('saveDispatchTemplate').checked;
             const includeCallTake = document.getElementById('saveCallTakeTemplate').checked;
+            const includeRelievers = document.getElementById('saveRelieversTemplate').checked;
             
             if (!name) {
                 alert('Please enter a template name.');
                 return;
             }
             
-            if (!includeDispatch && !includeCallTake) {
-                alert('Please select at least one desk type to include.');
+            if (!includeDispatch && !includeCallTake && !includeRelievers) {
+                alert('Please select at least one option to include.');
                 return;
             }
             
@@ -5273,7 +5312,8 @@
                 dispatch_desks: {},
                 dispatch_instances: {},
                 calltake_desks: {},
-                calltake_instances: {}
+                calltake_instances: {},
+                relievers: []
             };
             
             // Capture dispatch desk configurations
@@ -5323,16 +5363,33 @@
                 });
             }
             
+            // Capture reliever configurations (hours and schedule slots, not member assignments)
+            if (includeRelievers && state.relieverDuties.length > 0) {
+                template.relievers = state.relieverDuties.map((reliever, index) => ({
+                    relieverNum: index + 1,
+                    hours: reliever.hours ? { ...reliever.hours } : { start: '06:30', end: '15:00' },
+                    breakTimes: reliever.breakTimes ? { ...reliever.breakTimes } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
+                    schedule: reliever.schedule ? { ...reliever.schedule } : {}
+                }));
+            }
+            
             await saveTemplateToDB(template);
             closeSaveTemplateModal();
             
-            // Count instances for message
+            // Count instances and relievers for message
             const dispatchInstanceCount = Object.values(template.dispatch_instances).reduce((sum, arr) => sum + arr.length, 0);
             const callTakeInstanceCount = Object.values(template.calltake_instances).reduce((sum, arr) => sum + arr.length, 0);
-            let instanceMsg = '';
-            if (dispatchInstanceCount > 0 || callTakeInstanceCount > 0) {
-                instanceMsg = ` (includes ${dispatchInstanceCount + callTakeInstanceCount} desk instance${dispatchInstanceCount + callTakeInstanceCount !== 1 ? 's' : ''})`;
+            const relieverCount = template.relievers.length;
+            
+            let detailsMsg = [];
+            if (dispatchInstanceCount + callTakeInstanceCount > 0) {
+                detailsMsg.push(`${dispatchInstanceCount + callTakeInstanceCount} desk instance${dispatchInstanceCount + callTakeInstanceCount !== 1 ? 's' : ''}`);
             }
+            if (relieverCount > 0) {
+                detailsMsg.push(`${relieverCount} reliever${relieverCount !== 1 ? 's' : ''}`);
+            }
+            
+            let instanceMsg = detailsMsg.length > 0 ? ` (includes ${detailsMsg.join(', ')})` : '';
             
             alert(`Template "${name}" saved successfully!${instanceMsg}`);
         }
@@ -5375,25 +5432,38 @@
             
             const applyToDispatch = document.getElementById('applyToDispatch').checked;
             const applyToCallTake = document.getElementById('applyToCallTake').checked;
+            const applyToRelievers = document.getElementById('applyToRelievers').checked;
             
-            if (!applyToDispatch && !applyToCallTake) {
-                alert('Please select at least one desk type to apply.');
+            if (!applyToDispatch && !applyToCallTake && !applyToRelievers) {
+                alert('Please select at least one option to apply.');
                 return;
             }
             
-            // Count instances in template
+            // Count instances and relievers in template
             const dispatchInstanceCount = template.dispatch_instances ? 
                 Object.values(template.dispatch_instances).reduce((sum, arr) => sum + arr.length, 0) : 0;
             const callTakeInstanceCount = template.calltake_instances ? 
                 Object.values(template.calltake_instances).reduce((sum, arr) => sum + arr.length, 0) : 0;
+            const relieverCount = template.relievers ? template.relievers.length : 0;
             
-            let instanceMsg = '';
-            if (dispatchInstanceCount > 0 || callTakeInstanceCount > 0) {
-                instanceMsg = `\n\nThis template includes ${dispatchInstanceCount + callTakeInstanceCount} desk instance(s) that will be created.`;
+            let detailsMsg = [];
+            if (dispatchInstanceCount + callTakeInstanceCount > 0) {
+                detailsMsg.push(`${dispatchInstanceCount + callTakeInstanceCount} desk instance(s)`);
+            }
+            if (applyToRelievers && relieverCount > 0) {
+                detailsMsg.push(`${relieverCount} reliever(s)`);
             }
             
+            let instanceMsg = detailsMsg.length > 0 ? `\n\nThis template includes ${detailsMsg.join(' and ')} that will be created.` : '';
+            
+            // Build apply targets string
+            let applyTargets = [];
+            if (applyToDispatch) applyTargets.push('Dispatch');
+            if (applyToCallTake) applyTargets.push('Call Take');
+            if (applyToRelievers && relieverCount > 0) applyTargets.push('Relievers');
+            
             // Confirm before applying
-            if (!confirm(`Apply template "${template.name}" to the current schedule?\n\nThis will overwrite existing desk hours and break times${applyToDispatch ? ' for Dispatch' : ''}${applyToDispatch && applyToCallTake ? ' and' : ''}${applyToCallTake ? ' for Call Take' : ''} desks.${instanceMsg}\n\nMember assignments will not be affected.`)) {
+            if (!confirm(`Apply template "${template.name}" to the current schedule?\n\nThis will overwrite existing configurations for: ${applyTargets.join(', ')}.${instanceMsg}\n\nMember assignments will not be affected.`)) {
                 return;
             }
             
@@ -5488,11 +5558,42 @@
                 initializeCallTakeTable();
             }
             
+            // Apply relievers
+            if (applyToRelievers && template.relievers && template.relievers.length > 0) {
+                // Clear existing relievers
+                state.relieverDuties = [];
+                
+                // Create new relievers from template
+                template.relievers.forEach(config => {
+                    const relieverId = relieverIdCounter++;
+                    state.relieverDuties.push({
+                        id: relieverId,
+                        memberId: null, // No member assignment from template
+                        hours: config.hours ? { ...config.hours } : { start: '06:30', end: '15:00' },
+                        breakTimes: config.breakTimes ? { ...config.breakTimes } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
+                        schedule: config.schedule ? { ...config.schedule } : {},
+                        notes: ''
+                    });
+                });
+                
+                // Re-render relievers
+                renderRelieverDuties();
+                updateNavCounts();
+            }
+            
             closeApplyTemplateModal();
             
+            let appliedDetails = [];
+            if (dispatchInstanceCount + callTakeInstanceCount > 0 && (applyToDispatch || applyToCallTake)) {
+                appliedDetails.push(`${dispatchInstanceCount + callTakeInstanceCount} desk instance(s)`);
+            }
+            if (applyToRelievers && relieverCount > 0) {
+                appliedDetails.push(`${relieverCount} reliever(s)`);
+            }
+            
             let appliedMsg = `Template "${template.name}" applied successfully!`;
-            if (dispatchInstanceCount > 0 || callTakeInstanceCount > 0) {
-                appliedMsg += `\n\n${dispatchInstanceCount + callTakeInstanceCount} desk instance(s) were created.`;
+            if (appliedDetails.length > 0) {
+                appliedMsg += `\n\n${appliedDetails.join(' and ')} were created.`;
             }
             alert(appliedMsg);
         }
