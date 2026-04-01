@@ -4990,7 +4990,7 @@
         let selectedTemplateId = null;
 
         async function loadTemplatesFromDB() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 // Load from localStorage as fallback
                 const stored = localStorage.getItem('scheduleTemplates');
                 scheduleTemplates = stored ? JSON.parse(stored) : [];
@@ -4998,7 +4998,7 @@
             }
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('schedule_templates')
                     .select('*')
                     .order('name');
@@ -5012,16 +5012,18 @@
                     scheduleTemplates = data || [];
                     // Sync localStorage with DB data
                     localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                    console.log('Templates loaded from Supabase:', scheduleTemplates.length);
                 }
             } catch (err) {
                 console.error('Error loading templates:', err);
                 const stored = localStorage.getItem('scheduleTemplates');
                 scheduleTemplates = stored ? JSON.parse(stored) : [];
             }
+            }
         }
 
         async function saveTemplateToDB(template) {
-            if (!supabase) {
+            if (!supabaseClient) {
                 // Save to localStorage as fallback
                 scheduleTemplates.push(template);
                 localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
@@ -5029,7 +5031,7 @@
             }
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('schedule_templates')
                     .insert([template])
                     .select()
@@ -5064,12 +5066,12 @@
                 localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
             }
             
-            if (!supabase) {
+            if (!supabaseClient) {
                 return;
             }
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('schedule_templates')
                     .update(updates)
                     .eq('id', templateId);
@@ -5094,12 +5096,12 @@
             
             console.log(`Deleted template ${templateId}. Array length: ${initialLength} -> ${scheduleTemplates.length}`);
             
-            if (!supabase) {
+            if (!supabaseClient) {
                 return;
             }
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('schedule_templates')
                     .delete()
                     .eq('id', templateId);
