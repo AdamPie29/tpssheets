@@ -7337,16 +7337,58 @@
             }
             
             // Standard same-day logic
-            let adjustedCheckTime = checkTime;
+            // For overnight shifts on the same day, we only show the BEFORE-midnight portion
+            // The after-midnight portion is shown when checking as previous day
             if (isOvernightShift) {
-                endTime += 24 * 60;
-                if (adjustedCheckTime < startTime) {
-                    adjustedCheckTime += 24 * 60;
+                // For same-day overnight shift, only show if check time is >= start time
+                // (i.e., the evening portion before midnight)
+                if (checkTime >= startTime) {
+                    // Check if on break during this portion
+                    if (breakTimes) {
+                        if (breakTimes.break1) {
+                            const [b1Hour, b1Min] = breakTimes.break1.split(':').map(Number);
+                            const break1Start = b1Hour * 60 + b1Min;
+                            // Only check breaks that occur before midnight (>= startTime)
+                            if (break1Start >= startTime) {
+                                const break1End = break1Start + 15;
+                                if (checkTime >= break1Start && checkTime < break1End) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        if (breakTimes.lunch && breakTimes.tibOption === 'na') {
+                            const [lunchHour, lunchMin] = breakTimes.lunch.split(':').map(Number);
+                            const lunchStart = lunchHour * 60 + lunchMin;
+                            if (lunchStart >= startTime) {
+                                const lunchDuration = breakTimes.plus15Enabled ? 60 : 45;
+                                const lunchEnd = lunchStart + lunchDuration;
+                                if (checkTime >= lunchStart && checkTime < lunchEnd) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        if (breakTimes.break2) {
+                            const [b2Hour, b2Min] = breakTimes.break2.split(':').map(Number);
+                            const break2Start = b2Hour * 60 + b2Min;
+                            if (break2Start >= startTime) {
+                                const break2End = break2Start + 15;
+                                if (checkTime >= break2Start && checkTime < break2End) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
                 }
+                // Check time is before start time (early morning) - don't show on same day
+                return false;
             }
             
+            // Regular same-day shift (not overnight)
             // Check if within working hours
-            if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
+            if (checkTime >= startTime && checkTime < endTime) {
                 // Check if on break
                 if (breakTimes) {
                     // Check Break 1 (15 minutes)
