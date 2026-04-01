@@ -3923,19 +3923,21 @@
                 const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                 const assignedDesk = reliever.schedule[timeKey];
                 
-                if (assignedDesk) {
-                    const deskUpper = assignedDesk.toUpperCase();
-                    // Check if assigned to a call take desk (PC prefix)
-                    if (deskUpper.startsWith('PC') || callTakeLabels.includes(deskUpper)) {
+                // Skip if no assignment, or if on break (BR) or lunch (LU)
+                if (!assignedDesk) return;
+                const deskUpper = assignedDesk.toUpperCase();
+                if (deskUpper === 'BR' || deskUpper === 'LU') return;
+                
+                // Check if assigned to a call take desk (PC prefix)
+                if (deskUpper.startsWith('PC') || callTakeLabels.includes(deskUpper)) {
+                    count++;
+                }
+                // Also check if assigned to a dispatch desk that's functioning as call take
+                const dispatchMatch = deskUpper.match(/(?:PD)?(\d{2})/);
+                if (dispatchMatch) {
+                    const dispatchDeskNum = dispatchMatch[1];
+                    if (state.deskFunctions[dispatchDeskNum] === 'calltake') {
                         count++;
-                    }
-                    // Also check if assigned to a dispatch desk that's functioning as call take
-                    const dispatchMatch = deskUpper.match(/(?:PD)?(\d{2})/);
-                    if (dispatchMatch) {
-                        const dispatchDeskNum = dispatchMatch[1];
-                        if (state.deskFunctions[dispatchDeskNum] === 'calltake') {
-                            count++;
-                        }
                     }
                 }
             });
@@ -4294,6 +4296,7 @@
                                     position: deskLabels[deskNum] || `PD${deskNum}`,
                                     hours: hours ? `${hours.start} - ${hours.end}` : 'N/A',
                                     breaks: formatBreaks(breaks),
+                                    breakMinutes: calculateBreakMinutes(breaks),
                                     shiftType: shiftType,
                                     deskFunction: deskFunc
                                 });
@@ -4311,6 +4314,7 @@
                                         position: `${deskLabels[baseDeskNum] || `PD${baseDeskNum}`} (#${instance.instanceNum})`,
                                         hours: instance.hours ? `${instance.hours.start} - ${instance.hours.end}` : 'N/A',
                                         breaks: formatBreaks(instance.breakTimes),
+                                        breakMinutes: calculateBreakMinutes(instance.breakTimes),
                                         shiftType: instance.shiftType || 'regular',
                                         deskFunction: instance.deskFunction || 'dispatch'
                                     });
@@ -4333,6 +4337,7 @@
                                     position: callTakeLabels[ctIndex] || deskNum,
                                     hours: hours ? `${hours.start} - ${hours.end}` : 'N/A',
                                     breaks: formatBreaks(breaks),
+                                    breakMinutes: calculateBreakMinutes(breaks),
                                     shiftType: shiftType,
                                     deskFunction: 'calltake'
                                 });
@@ -4351,6 +4356,7 @@
                                         position: `${callTakeLabels[ctIndex] || baseDeskNum} (#${instance.instanceNum})`,
                                         hours: instance.hours ? `${instance.hours.start} - ${instance.hours.end}` : 'N/A',
                                         breaks: formatBreaks(instance.breakTimes),
+                                        breakMinutes: calculateBreakMinutes(instance.breakTimes),
                                         shiftType: instance.shiftType || 'regular',
                                         deskFunction: 'calltake'
                                     });
@@ -4363,15 +4369,42 @@
                     if (schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (reliever.memberId === memberId) {
-                                const slotCount = reliever.schedule ? Object.keys(reliever.schedule).filter(k => reliever.schedule[k]).length : 0;
+                                // Count actual desk assignments vs breaks
+                                let deskSlots = 0;
+                                let breakSlots = 0;
+                                let lunchSlots = 0;
+                                
+                                if (reliever.schedule) {
+                                    Object.keys(reliever.schedule).forEach(k => {
+                                        const val = reliever.schedule[k];
+                                        if (val) {
+                                            const upper = val.toUpperCase();
+                                            if (upper === 'BR') {
+                                                breakSlots++;
+                                            } else if (upper === 'LU') {
+                                                lunchSlots++;
+                                            } else {
+                                                deskSlots++;
+                                            }
+                                        }
+                                    });
+                                }
+                                
+                                // Calculate break time info (each slot is 15 minutes)
+                                const totalBreakMinutes = (breakSlots * 15) + (lunchSlots * 15);
+                                let breakInfo = [];
+                                if (breakSlots > 0) breakInfo.push(`Break: ${breakSlots * 15}min`);
+                                if (lunchSlots > 0) breakInfo.push(`Lunch: ${lunchSlots * 15}min`);
+                                
                                 dateResult.assignments.push({
                                     type: 'Reliever',
                                     position: 'Reliever Duty',
                                     hours: reliever.hours ? `${reliever.hours.start} - ${reliever.hours.end}` : 'N/A',
-                                    breaks: formatBreaks(reliever.breakTimes),
+                                    breaks: breakInfo.length > 0 ? breakInfo.join(', ') : 'None',
+                                    breakMinutes: totalBreakMinutes,
                                     shiftType: 'regular',
                                     deskFunction: 'reliever',
-                                    extra: `${slotCount} desk assignments`
+                                    extra: `${deskSlots} desk slots`
                                 });
                             }
                         });
@@ -4491,7 +4524,15 @@
             
             results.forEach(result => {
                 result.assignments.forEach(assignment => {
-                    const minutes = parseHoursToMinutes(assignment.hours);
+                    let minutes = parseHoursToMinutes(assignment.hours);
+                    
+                    // Subtract break minutes if available
+                    if (assignment.breakMinutes) {
+                        minutes -= assignment.breakMinutes;
+                    }
+                    
+                    // Ensure we don't go negative
+                    minutes = Math.max(0, minutes);
                     
                     if (assignment.deskFunction === 'dispatch' || assignment.type === 'Dispatch') {
                         // Check if it's actually a CT function on a dispatch desk
@@ -4515,6 +4556,24 @@
                 other: otherMinutes / 60,
                 total: (dispatchMinutes + calltakeMinutes + otherMinutes) / 60
             };
+        }
+        
+        function calculateBreakMinutes(breaks) {
+            if (!breaks) return 0;
+            let totalMinutes = 0;
+            
+            // Break 1 is 15 minutes
+            if (breaks.break1) totalMinutes += 15;
+            
+            // Lunch is 45 minutes (or 60 if +15 enabled), unless TIB/NL
+            if (breaks.lunch && breaks.tibOption === 'na') {
+                totalMinutes += breaks.plus15Enabled ? 60 : 45;
+            }
+            
+            // Break 2 is 15 minutes
+            if (breaks.break2) totalMinutes += 15;
+            
+            return totalMinutes;
         }
 
         function parseHoursToMinutes(hoursStr) {
@@ -8150,20 +8209,21 @@
                             const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                             const assignedDesk = reliever.schedule[timeKey];
                             
-                            if (assignedDesk) {
-                                const deskUpper = assignedDesk.toUpperCase();
-                                
-                                if (deskType === 'dispatch') {
-                                    const match = deskUpper.match(/(?:PD)?(\d{2})/);
-                                    if (match && match[1] === deskNum) {
-                                        addAgent(reliever.memberId);
-                                    }
-                                } else if (deskType === 'calltake') {
-                                    const ctIndex = parseInt(deskNum.substring(2)) - 1;
-                                    const expectedLabel = callTakeLabels[ctIndex];
-                                    if (deskUpper === expectedLabel || deskUpper === deskNum) {
-                                        addAgent(reliever.memberId);
-                                    }
+                            // Skip if no assignment, or if on break (BR) or lunch (LU)
+                            if (!assignedDesk) return;
+                            const deskUpper = assignedDesk.toUpperCase();
+                            if (deskUpper === 'BR' || deskUpper === 'LU') return;
+                            
+                            if (deskType === 'dispatch') {
+                                const match = deskUpper.match(/(?:PD)?(\d{2})/);
+                                if (match && match[1] === deskNum) {
+                                    addAgent(reliever.memberId);
+                                }
+                            } else if (deskType === 'calltake') {
+                                const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                const expectedLabel = callTakeLabels[ctIndex];
+                                if (deskUpper === expectedLabel || deskUpper === deskNum) {
+                                    addAgent(reliever.memberId);
                                 }
                             }
                         });
@@ -8543,20 +8603,21 @@
                                 const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
                                 const assignedDesk = reliever.schedule[timeKey];
                                 
-                                if (assignedDesk) {
-                                    const deskUpper = assignedDesk.toUpperCase();
-                                    
-                                    if (deskType === 'dispatch') {
-                                        const match = deskUpper.match(/(?:PD)?(\d{2})/);
-                                        if (match && match[1] === deskNum) {
-                                            addMember(reliever.memberId);
-                                        }
-                                    } else if (deskType === 'calltake') {
-                                        const ctIndex = parseInt(deskNum.substring(2)) - 1;
-                                        const expectedLabel = callTakeLabels[ctIndex];
-                                        if (deskUpper === expectedLabel) {
-                                            addMember(reliever.memberId);
-                                        }
+                                // Skip if no assignment, or if on break (BR) or lunch (LU)
+                                if (!assignedDesk) return;
+                                const deskUpper = assignedDesk.toUpperCase();
+                                if (deskUpper === 'BR' || deskUpper === 'LU') return;
+                                
+                                if (deskType === 'dispatch') {
+                                    const match = deskUpper.match(/(?:PD)?(\d{2})/);
+                                    if (match && match[1] === deskNum) {
+                                        addMember(reliever.memberId);
+                                    }
+                                } else if (deskType === 'calltake') {
+                                    const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                    const expectedLabel = callTakeLabels[ctIndex];
+                                    if (deskUpper === expectedLabel) {
+                                        addMember(reliever.memberId);
                                     }
                                 }
                             }
