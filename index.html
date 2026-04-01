@@ -278,6 +278,18 @@
             transform: translateY(-2px);
         }
 
+        .btn-accent {
+            background: var(--accent);
+            border: 2px solid var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .btn-accent:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
         .container {
             max-width: 1600px;
             margin: 2rem auto;
@@ -2316,6 +2328,143 @@
             color: var(--text-primary);
         }
 
+        /* Template Modal Styles */
+        .template-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .template-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-item:hover {
+            border-color: var(--accent);
+            background: var(--primary-light);
+        }
+
+        .template-item.selected {
+            border-color: var(--accent);
+            background: rgba(79, 172, 254, 0.15);
+        }
+
+        .template-item-info {
+            flex: 1;
+        }
+
+        .template-item-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .template-item-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .template-item-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .template-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .template-action-btn {
+            padding: 0.35rem 0.6rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-action-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .template-action-btn.delete:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .template-empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .template-apply-options {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .template-option-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .template-option-checkbox input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .template-preview {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-top: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .template-preview-title {
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.5rem;
+        }
+
+        .template-preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .template-preview-item {
+            padding: 0.35rem 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .template-preview-desk {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
         .swap-info {
             background: var(--bg-dark);
             border: 1px solid var(--border);
@@ -2439,6 +2588,9 @@
                 </div>
                 <button class="btn btn-secondary" onclick="loadScheduleForCurrentDate()" style="padding: 0.5rem 1rem;">Load Saved Schedule</button>
                 <button class="btn btn-secondary" onclick="clearCurrentSchedule()" style="padding: 0.5rem 1rem;">Clear Schedule</button>
+                <div style="border-left: 1px solid var(--border); height: 24px; margin: 0 0.5rem;"></div>
+                <button class="btn btn-accent" onclick="openApplyTemplateModal()" style="padding: 0.5rem 1rem;">📋 Apply Template</button>
+                <button class="btn btn-secondary" onclick="openSaveTemplateModal()" style="padding: 0.5rem 1rem;">💾 Save as Template</button>
             </div>
         </div>
 
@@ -2870,6 +3022,114 @@
         </div>
     </div>
     </div> <!-- End of mainApp -->
+
+    <!-- Apply Template Modal -->
+    <div id="applyTemplateModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title">📋 Apply Template</h2>
+                <button class="modal-close" onclick="closeApplyTemplateModal()">&times;</button>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Select a template to apply desk hours and break times to the current schedule. 
+                Member assignments will not be affected.
+            </p>
+            
+            <div class="template-list" id="templateList">
+                <div class="template-empty">Loading templates...</div>
+            </div>
+            
+            <div class="template-apply-options">
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="applyToDispatch" checked>
+                    <span>Apply to Dispatch Desks</span>
+                </label>
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="applyToCallTake" checked>
+                    <span>Apply to Call Take Desks</span>
+                </label>
+            </div>
+            
+            <div class="template-preview" id="templatePreview" style="display: none;">
+                <div class="template-preview-title">Template Preview</div>
+                <div class="template-preview-grid" id="templatePreviewGrid"></div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeApplyTemplateModal()">Cancel</button>
+                <button class="btn btn-primary" id="applyTemplateBtn" onclick="applySelectedTemplate()" disabled>Apply Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Template Modal -->
+    <div id="saveTemplateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">💾 Save as Template</h2>
+                <button class="modal-close" onclick="closeSaveTemplateModal()">&times;</button>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Save the current desk hours and break times as a reusable template. 
+                Member assignments will not be saved in the template.
+            </p>
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Template Name *</label>
+                <input type="text" id="templateName" class="form-input" placeholder="e.g., A Platoon - Day Shift" style="width: 100%;">
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Description (optional)</label>
+                <textarea id="templateDescription" class="form-input" placeholder="Add notes about when to use this template..." style="width: 100%; min-height: 80px; resize: vertical;"></textarea>
+            </div>
+            
+            <div class="template-apply-options">
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="saveDispatchTemplate" checked>
+                    <span>Include Dispatch Desks</span>
+                </label>
+                <label class="template-option-checkbox">
+                    <input type="checkbox" id="saveCallTakeTemplate" checked>
+                    <span>Include Call Take Desks</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeSaveTemplateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCurrentAsTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Template Modal -->
+    <div id="editTemplateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">✏️ Edit Template</h2>
+                <button class="modal-close" onclick="closeEditTemplateModal()">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Template Name *</label>
+                <input type="text" id="editTemplateName" class="form-input" style="width: 100%;">
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label">Description (optional)</label>
+                <textarea id="editTemplateDescription" class="form-input" style="width: 100%; min-height: 80px; resize: vertical;"></textarea>
+            </div>
+            
+            <input type="hidden" id="editTemplateId">
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeEditTemplateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="updateTemplate()">Update Template</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit Member Modal -->
     <div id="editMemberModal" class="modal">
@@ -3361,6 +3621,9 @@
             
             // Load all schedules for open seating
             await loadAllSchedulesFromDB();
+            
+            // Load schedule templates
+            await loadTemplatesFromDB();
             
             // Set today's date
             const today = new Date();
@@ -4369,20 +4632,25 @@
                     if (schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (reliever.memberId === memberId) {
-                                // Count actual desk assignments vs breaks
+                                // Track desk slots, break times, and lunch times
                                 let deskSlots = 0;
-                                let breakSlots = 0;
-                                let lunchSlots = 0;
+                                let breakTimes = [];
+                                let lunchTimes = [];
                                 
                                 if (reliever.schedule) {
-                                    Object.keys(reliever.schedule).forEach(k => {
+                                    // Sort time keys to process in order
+                                    const sortedKeys = Object.keys(reliever.schedule).sort();
+                                    
+                                    sortedKeys.forEach(k => {
                                         const val = reliever.schedule[k];
                                         if (val) {
                                             const upper = val.toUpperCase();
+                                            const formattedTime = k.substring(0, 2) + ':' + k.substring(2);
+                                            
                                             if (upper === 'BR') {
-                                                breakSlots++;
+                                                breakTimes.push(formattedTime);
                                             } else if (upper === 'LU') {
-                                                lunchSlots++;
+                                                lunchTimes.push(formattedTime);
                                             } else {
                                                 deskSlots++;
                                             }
@@ -4390,11 +4658,21 @@
                                     });
                                 }
                                 
-                                // Calculate break time info (each slot is 15 minutes)
-                                const totalBreakMinutes = (breakSlots * 15) + (lunchSlots * 15);
+                                // Calculate total break minutes
+                                const totalBreakMinutes = (breakTimes.length * 15) + (lunchTimes.length * 15);
+                                
+                                // Format break info showing start times
                                 let breakInfo = [];
-                                if (breakSlots > 0) breakInfo.push(`Break: ${breakSlots * 15}min`);
-                                if (lunchSlots > 0) breakInfo.push(`Lunch: ${lunchSlots * 15}min`);
+                                if (breakTimes.length > 0) {
+                                    // Show each break start time
+                                    breakTimes.forEach(time => {
+                                        breakInfo.push(`Break: ${time}`);
+                                    });
+                                }
+                                if (lunchTimes.length > 0) {
+                                    // Show only the first lunch time (start of lunch)
+                                    breakInfo.push(`Lunch: ${lunchTimes[0]}`);
+                                }
                                 
                                 dateResult.assignments.push({
                                     type: 'Reliever',
@@ -4697,6 +4975,392 @@
                     </div>
                 </div>
             `;
+        }
+
+        // Template System Functions
+        let scheduleTemplates = [];
+        let selectedTemplateId = null;
+
+        async function loadTemplatesFromDB() {
+            if (!supabase) {
+                // Load from localStorage as fallback
+                const stored = localStorage.getItem('scheduleTemplates');
+                scheduleTemplates = stored ? JSON.parse(stored) : [];
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('schedule_templates')
+                    .select('*')
+                    .order('name');
+                
+                if (error) {
+                    console.error('Error loading templates:', error);
+                    // Fallback to localStorage
+                    const stored = localStorage.getItem('scheduleTemplates');
+                    scheduleTemplates = stored ? JSON.parse(stored) : [];
+                } else {
+                    scheduleTemplates = data || [];
+                }
+            } catch (err) {
+                console.error('Error loading templates:', err);
+                const stored = localStorage.getItem('scheduleTemplates');
+                scheduleTemplates = stored ? JSON.parse(stored) : [];
+            }
+        }
+
+        async function saveTemplateToDB(template) {
+            if (!supabase) {
+                // Save to localStorage as fallback
+                scheduleTemplates.push(template);
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                return template;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('schedule_templates')
+                    .insert([template])
+                    .select()
+                    .single();
+                
+                if (error) {
+                    console.error('Error saving template:', error);
+                    // Fallback to localStorage
+                    scheduleTemplates.push(template);
+                    localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                    return template;
+                }
+                
+                scheduleTemplates.push(data);
+                return data;
+            } catch (err) {
+                console.error('Error saving template:', err);
+                scheduleTemplates.push(template);
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                return template;
+            }
+        }
+
+        async function updateTemplateInDB(templateId, updates) {
+            if (!supabase) {
+                // Update in localStorage
+                const idx = scheduleTemplates.findIndex(t => t.id === templateId);
+                if (idx !== -1) {
+                    scheduleTemplates[idx] = { ...scheduleTemplates[idx], ...updates };
+                    localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                }
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('schedule_templates')
+                    .update(updates)
+                    .eq('id', templateId);
+                
+                if (error) {
+                    console.error('Error updating template:', error);
+                }
+                
+                // Update local array
+                const idx = scheduleTemplates.findIndex(t => t.id === templateId);
+                if (idx !== -1) {
+                    scheduleTemplates[idx] = { ...scheduleTemplates[idx], ...updates };
+                }
+            } catch (err) {
+                console.error('Error updating template:', err);
+            }
+        }
+
+        async function deleteTemplateFromDB(templateId) {
+            if (!supabase) {
+                // Delete from localStorage
+                scheduleTemplates = scheduleTemplates.filter(t => t.id !== templateId);
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+                return;
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('schedule_templates')
+                    .delete()
+                    .eq('id', templateId);
+                
+                if (error) {
+                    console.error('Error deleting template:', error);
+                }
+                
+                // Remove from local array
+                scheduleTemplates = scheduleTemplates.filter(t => t.id !== templateId);
+            } catch (err) {
+                console.error('Error deleting template:', err);
+            }
+        }
+
+        function openApplyTemplateModal() {
+            selectedTemplateId = null;
+            document.getElementById('applyTemplateBtn').disabled = true;
+            document.getElementById('templatePreview').style.display = 'none';
+            document.getElementById('applyTemplateModal').classList.add('active');
+            renderTemplateList();
+        }
+
+        function closeApplyTemplateModal() {
+            document.getElementById('applyTemplateModal').classList.remove('active');
+            selectedTemplateId = null;
+        }
+
+        function openSaveTemplateModal() {
+            document.getElementById('templateName').value = '';
+            document.getElementById('templateDescription').value = '';
+            document.getElementById('saveDispatchTemplate').checked = true;
+            document.getElementById('saveCallTakeTemplate').checked = true;
+            document.getElementById('saveTemplateModal').classList.add('active');
+        }
+
+        function closeSaveTemplateModal() {
+            document.getElementById('saveTemplateModal').classList.remove('active');
+        }
+
+        function openEditTemplateModal(templateId) {
+            const template = scheduleTemplates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            document.getElementById('editTemplateId').value = templateId;
+            document.getElementById('editTemplateName').value = template.name;
+            document.getElementById('editTemplateDescription').value = template.description || '';
+            document.getElementById('editTemplateModal').classList.add('active');
+        }
+
+        function closeEditTemplateModal() {
+            document.getElementById('editTemplateModal').classList.remove('active');
+        }
+
+        function renderTemplateList() {
+            const container = document.getElementById('templateList');
+            
+            if (scheduleTemplates.length === 0) {
+                container.innerHTML = `
+                    <div class="template-empty">
+                        <p>No templates saved yet.</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Use "Save as Template" to create your first template.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = scheduleTemplates.map(template => {
+                const dispatchCount = template.dispatch_desks ? Object.keys(template.dispatch_desks).length : 0;
+                const callTakeCount = template.calltake_desks ? Object.keys(template.calltake_desks).length : 0;
+                const createdDate = template.created_at ? new Date(template.created_at).toLocaleDateString() : '';
+                
+                return `
+                    <div class="template-item ${selectedTemplateId === template.id ? 'selected' : ''}" 
+                         onclick="selectTemplate('${template.id}')">
+                        <div class="template-item-info">
+                            <div class="template-item-name">${template.name}</div>
+                            ${template.description ? `<div class="template-item-desc">${template.description}</div>` : ''}
+                            <div class="template-item-meta">
+                                ${dispatchCount > 0 ? `${dispatchCount} dispatch desks` : ''}
+                                ${dispatchCount > 0 && callTakeCount > 0 ? ' · ' : ''}
+                                ${callTakeCount > 0 ? `${callTakeCount} call take desks` : ''}
+                                ${createdDate ? ` · Created ${createdDate}` : ''}
+                            </div>
+                        </div>
+                        <div class="template-item-actions">
+                            <button class="template-action-btn" onclick="event.stopPropagation(); openEditTemplateModal('${template.id}')" title="Edit">✏️</button>
+                            <button class="template-action-btn delete" onclick="event.stopPropagation(); confirmDeleteTemplate('${template.id}')" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectTemplate(templateId) {
+            selectedTemplateId = templateId;
+            document.getElementById('applyTemplateBtn').disabled = false;
+            renderTemplateList();
+            showTemplatePreview(templateId);
+        }
+
+        function showTemplatePreview(templateId) {
+            const template = scheduleTemplates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            const previewContainer = document.getElementById('templatePreview');
+            const previewGrid = document.getElementById('templatePreviewGrid');
+            
+            let previewHTML = '';
+            
+            // Show first few dispatch desks
+            if (template.dispatch_desks) {
+                const desks = Object.keys(template.dispatch_desks).slice(0, 6);
+                desks.forEach(deskNum => {
+                    const desk = template.dispatch_desks[deskNum];
+                    const label = deskLabels[deskNum] || `PD${deskNum}`;
+                    previewHTML += `
+                        <div class="template-preview-item">
+                            <span class="template-preview-desk">${label}:</span>
+                            ${desk.hours?.start || '?'} - ${desk.hours?.end || '?'}
+                        </div>
+                    `;
+                });
+                
+                if (Object.keys(template.dispatch_desks).length > 6) {
+                    previewHTML += `<div class="template-preview-item" style="color: var(--text-secondary);">... and ${Object.keys(template.dispatch_desks).length - 6} more</div>`;
+                }
+            }
+            
+            previewGrid.innerHTML = previewHTML || '<div style="color: var(--text-secondary);">No desk configurations in this template</div>';
+            previewContainer.style.display = 'block';
+        }
+
+        async function saveCurrentAsTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const description = document.getElementById('templateDescription').value.trim();
+            const includeDispatch = document.getElementById('saveDispatchTemplate').checked;
+            const includeCallTake = document.getElementById('saveCallTakeTemplate').checked;
+            
+            if (!name) {
+                alert('Please enter a template name.');
+                return;
+            }
+            
+            if (!includeDispatch && !includeCallTake) {
+                alert('Please select at least one desk type to include.');
+                return;
+            }
+            
+            // Build template data from current state
+            const template = {
+                id: 'template_' + Date.now(),
+                name: name,
+                description: description,
+                created_at: new Date().toISOString(),
+                dispatch_desks: {},
+                calltake_desks: {}
+            };
+            
+            // Capture dispatch desk configurations
+            if (includeDispatch) {
+                for (let i = 1; i <= 24; i++) {
+                    const deskNum = String(i).padStart(2, '0');
+                    template.dispatch_desks[deskNum] = {
+                        hours: state.deskHours[deskNum] ? { ...state.deskHours[deskNum] } : { start: '06:30', end: '15:00' },
+                        breaks: state.breakTimes[deskNum] ? { ...state.breakTimes[deskNum] } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' }
+                    };
+                }
+            }
+            
+            // Capture call take desk configurations
+            if (includeCallTake) {
+                callTakeLabels.forEach((label, index) => {
+                    const deskNum = `CT${String(index + 1).padStart(2, '0')}`;
+                    template.calltake_desks[deskNum] = {
+                        hours: state.callTakeDeskHours[deskNum] ? { ...state.callTakeDeskHours[deskNum] } : { start: '06:30', end: '15:00' },
+                        breaks: state.callTakeBreakTimes[deskNum] ? { ...state.callTakeBreakTimes[deskNum] } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' }
+                    };
+                });
+            }
+            
+            await saveTemplateToDB(template);
+            closeSaveTemplateModal();
+            alert(`Template "${name}" saved successfully!`);
+        }
+
+        async function updateTemplate() {
+            const templateId = document.getElementById('editTemplateId').value;
+            const name = document.getElementById('editTemplateName').value.trim();
+            const description = document.getElementById('editTemplateDescription').value.trim();
+            
+            if (!name) {
+                alert('Please enter a template name.');
+                return;
+            }
+            
+            await updateTemplateInDB(templateId, { name, description });
+            closeEditTemplateModal();
+            renderTemplateList();
+        }
+
+        async function confirmDeleteTemplate(templateId) {
+            const template = scheduleTemplates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            if (confirm(`Are you sure you want to delete the template "${template.name}"?\n\nThis action cannot be undone.`)) {
+                await deleteTemplateFromDB(templateId);
+                if (selectedTemplateId === templateId) {
+                    selectedTemplateId = null;
+                    document.getElementById('applyTemplateBtn').disabled = true;
+                    document.getElementById('templatePreview').style.display = 'none';
+                }
+                renderTemplateList();
+            }
+        }
+
+        function applySelectedTemplate() {
+            if (!selectedTemplateId) return;
+            
+            const template = scheduleTemplates.find(t => t.id === selectedTemplateId);
+            if (!template) return;
+            
+            const applyToDispatch = document.getElementById('applyToDispatch').checked;
+            const applyToCallTake = document.getElementById('applyToCallTake').checked;
+            
+            if (!applyToDispatch && !applyToCallTake) {
+                alert('Please select at least one desk type to apply.');
+                return;
+            }
+            
+            // Confirm before applying
+            if (!confirm(`Apply template "${template.name}" to the current schedule?\n\nThis will overwrite existing desk hours and break times${applyToDispatch ? ' for Dispatch' : ''}${applyToDispatch && applyToCallTake ? ' and' : ''}${applyToCallTake ? ' for Call Take' : ''} desks.\n\nMember assignments will not be affected.`)) {
+                return;
+            }
+            
+            // Apply dispatch desk configurations
+            if (applyToDispatch && template.dispatch_desks) {
+                Object.keys(template.dispatch_desks).forEach(deskNum => {
+                    const config = template.dispatch_desks[deskNum];
+                    
+                    // Apply hours
+                    if (config.hours) {
+                        state.deskHours[deskNum] = { ...config.hours };
+                    }
+                    
+                    // Apply breaks
+                    if (config.breaks) {
+                        state.breakTimes[deskNum] = { ...config.breaks };
+                    }
+                });
+                
+                // Re-render dispatch table
+                initializeDeskTable();
+            }
+            
+            // Apply call take desk configurations
+            if (applyToCallTake && template.calltake_desks) {
+                Object.keys(template.calltake_desks).forEach(deskNum => {
+                    const config = template.calltake_desks[deskNum];
+                    
+                    // Apply hours
+                    if (config.hours) {
+                        state.callTakeDeskHours[deskNum] = { ...config.hours };
+                    }
+                    
+                    // Apply breaks
+                    if (config.breaks) {
+                        state.callTakeBreakTimes[deskNum] = { ...config.breaks };
+                    }
+                });
+                
+                // Re-render call take table
+                initializeCallTakeTable();
+            }
+            
+            closeApplyTemplateModal();
+            alert(`Template "${template.name}" applied successfully!`);
         }
 
         // SOS/OS Functions
