@@ -7077,14 +7077,14 @@
         function generateDispatchAgentMapChart() {
             const table = document.getElementById('dispatchAgentMapChart');
             
-            // Generate time headers (24 hours in 15-minute increments = 96 columns)
+            // Generate time headers (06:30 to 06:30 next day = 96 columns)
+            // Time slots: 0630-2345 (current day) then 0000-0615 (next day)
+            const timeSlots = getChartTimeSlots();
+            
             let headerHTML = '<thead><tr><th class="desk-label">Desk</th>';
-            for (let hour = 0; hour < 24; hour++) {
-                for (let min = 0; min < 60; min += 15) {
-                    const timeStr = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}`;
-                    headerHTML += `<th>${timeStr}</th>`;
-                }
-            }
+            timeSlots.forEach(slot => {
+                headerHTML += `<th>${slot.label}</th>`;
+            });
             headerHTML += '</tr></thead>';
             
             // Generate rows for each dispatch desk
@@ -7096,15 +7096,13 @@
                 bodyHTML += `<tr><td class="desk-label">${deskLabel}</td>`;
                 
                 // For each 15-minute slot, get agent names
-                for (let hour = 0; hour < 24; hour++) {
-                    for (let min = 0; min < 60; min += 15) {
-                        const agents = getDeskAgents('dispatch', deskNum, hour, min);
-                        const cellClass = agents.length > 0 ? 'agent-cell' : '';
-                        const cellValue = agents.join(', ');
-                        const cellTitle = agents.length > 0 ? agents.join(', ') : '';
-                        bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
-                    }
-                }
+                timeSlots.forEach(slot => {
+                    const agents = getDeskAgents('dispatch', deskNum, slot.hour, slot.minute, slot.isNextDay);
+                    const cellClass = agents.length > 0 ? 'agent-cell' : '';
+                    const cellValue = agents.join(', ');
+                    const cellTitle = agents.length > 0 ? agents.join(', ') : '';
+                    bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
+                });
                 
                 bodyHTML += '</tr>';
             }
@@ -7116,14 +7114,13 @@
         function generateCallTakeAgentMapChart() {
             const table = document.getElementById('callTakeAgentMapChart');
             
-            // Generate time headers
+            // Generate time headers (06:30 to 06:30 next day = 96 columns)
+            const timeSlots = getChartTimeSlots();
+            
             let headerHTML = '<thead><tr><th class="desk-label">Desk</th>';
-            for (let hour = 0; hour < 24; hour++) {
-                for (let min = 0; min < 60; min += 15) {
-                    const timeStr = `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}`;
-                    headerHTML += `<th>${timeStr}</th>`;
-                }
-            }
+            timeSlots.forEach(slot => {
+                headerHTML += `<th>${slot.label}</th>`;
+            });
             headerHTML += '</tr></thead>';
             
             // Generate rows for each call take desk
@@ -7134,15 +7131,13 @@
                 bodyHTML += `<tr><td class="desk-label">${deskLabel}</td>`;
                 
                 // For each 15-minute slot, get agent names
-                for (let hour = 0; hour < 24; hour++) {
-                    for (let min = 0; min < 60; min += 15) {
-                        const agents = getDeskAgents('calltake', deskNum, hour, min);
-                        const cellClass = agents.length > 0 ? 'agent-cell' : '';
-                        const cellValue = agents.join(', ');
-                        const cellTitle = agents.length > 0 ? agents.join(', ') : '';
-                        bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
-                    }
-                }
+                timeSlots.forEach(slot => {
+                    const agents = getDeskAgents('calltake', deskNum, slot.hour, slot.minute, slot.isNextDay);
+                    const cellClass = agents.length > 0 ? 'agent-cell' : '';
+                    const cellValue = agents.join(', ');
+                    const cellTitle = agents.length > 0 ? agents.join(', ') : '';
+                    bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
+                });
                 
                 bodyHTML += '</tr>';
             });
@@ -7151,16 +7146,31 @@
             table.innerHTML = headerHTML + bodyHTML;
         }
 
-        function getDeskAgents(deskType, deskNum, hour, minute) {
+        function getDeskAgents(deskType, deskNum, hour, minute, isNextDay = false) {
             const agents = [];
             
             // Get the selected date for filtering
             const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
             const previousDate = getPreviousDate(selectedDate);
+            const nextDate = getNextDate(selectedDate);
             
-            // Check if we should look at previous day's overnight shifts
-            // (for times in the early morning before ~08:00)
-            const checkPreviousDay = hour < 8;
+            // Determine which date(s) to check based on time slot
+            // If isNextDay is true, we're looking at the after-midnight portion (0000-0630) 
+            // which should check the selected date's overnight shifts
+            let datesToCheck;
+            if (isNextDay) {
+                // For next day time slots (0000-0630), check selected date's overnight shifts
+                datesToCheck = [{ date: selectedDate, treatAsPreviousDay: true }];
+            } else if (hour < 8) {
+                // For early morning slots on selected date, check both selected date and previous date's overnight
+                datesToCheck = [
+                    { date: selectedDate, treatAsPreviousDay: false },
+                    { date: previousDate, treatAsPreviousDay: true }
+                ];
+            } else {
+                // For normal daytime slots, just check selected date
+                datesToCheck = [{ date: selectedDate, treatAsPreviousDay: false }];
+            }
             
             // Helper to add agent name if not already in list
             const addAgent = (memberId) => {
@@ -7176,12 +7186,7 @@
                 }
             };
             
-            // Process schedules for both current and previous date
-            const datesToCheck = checkPreviousDay ? [selectedDate, previousDate] : [selectedDate];
-            
-            datesToCheck.forEach(dateToCheck => {
-                const isFromPreviousDay = dateToCheck === previousDate;
-                
+            datesToCheck.forEach(({ date: dateToCheck, treatAsPreviousDay }) => {
                 Object.keys(state.openSeatingData).forEach(key => {
                     const schedule = state.openSeatingData[key];
                     if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
@@ -7195,7 +7200,7 @@
                             const deskHours = schedule.dispatchDesks.deskHours?.[deskNum];
                             const breakTimes = schedule.dispatchDesks.breakTimes?.[deskNum];
                             
-                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, isFromPreviousDay)) {
+                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, treatAsPreviousDay)) {
                                 addAgent(memberId);
                             }
                         }
@@ -7206,7 +7211,7 @@
                             const instances = schedule.dispatchDesks.instances[baseDeskNum] || [];
                             instances.forEach(instance => {
                                 if (instance.memberId) {
-                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, treatAsPreviousDay)) {
                                         addAgent(instance.memberId);
                                     }
                                 }
@@ -7218,7 +7223,7 @@
                             const deskHours = schedule.callTakeDesks.deskHours?.[deskNum];
                             const breakTimes = schedule.callTakeDesks.breakTimes?.[deskNum];
                             
-                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, isFromPreviousDay)) {
+                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, treatAsPreviousDay)) {
                                 addAgent(memberId);
                             }
                         }
@@ -7229,7 +7234,7 @@
                             const instances = schedule.callTakeDesks.instances[baseDeskNum] || [];
                             instances.forEach(instance => {
                                 if (instance.memberId) {
-                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, treatAsPreviousDay)) {
                                         addAgent(instance.memberId);
                                     }
                                 }
@@ -7237,8 +7242,8 @@
                         }
                     }
                     
-                    // Check reliever assignments from saved schedule (only for current day, relievers don't typically span overnight)
-                    if (!isFromPreviousDay && schedule.relieverDuties) {
+                    // Check reliever assignments (only for non-previous-day checks)
+                    if (!treatAsPreviousDay && schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (!reliever.memberId || !reliever.schedule) return;
                             
@@ -7388,18 +7393,58 @@
             date.setDate(date.getDate() - 1);
             return date.toISOString().split('T')[0];
         }
+        
+        // Helper to get next date string
+        function getNextDate(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            date.setDate(date.getDate() + 1);
+            return date.toISOString().split('T')[0];
+        }
+        
+        // Generate time slots from 06:30 to 06:30 next day (96 slots)
+        function getChartTimeSlots() {
+            const slots = [];
+            
+            // 06:30 to 23:45 on selected day (70 slots)
+            for (let hour = 6; hour < 24; hour++) {
+                const startMin = (hour === 6) ? 30 : 0;
+                for (let min = startMin; min < 60; min += 15) {
+                    slots.push({
+                        hour: hour,
+                        minute: min,
+                        label: `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}`,
+                        isNextDay: false
+                    });
+                }
+            }
+            
+            // 00:00 to 06:15 on next day (26 slots)
+            for (let hour = 0; hour < 7; hour++) {
+                const endMin = (hour === 6) ? 30 : 60;
+                for (let min = 0; min < endMin; min += 15) {
+                    slots.push({
+                        hour: hour,
+                        minute: min,
+                        label: `${String(hour).padStart(2, '0')}${String(min).padStart(2, '0')}`,
+                        isNextDay: true
+                    });
+                }
+            }
+            
+            return slots;
+        }
 
         function generateDispatchSeatingChart() {
             const table = document.getElementById('dispatchSeatingChart');
             
-            // Generate time headers (24 hours in 15-minute increments = 96 columns)
+            // Generate time headers (06:30 to 06:30 next day = 96 columns)
+            const timeSlots = getChartTimeSlots();
+            
             let headerHTML = '<thead><tr><th class="desk-label">Desk</th>';
-            for (let hour = 0; hour < 24; hour++) {
-                for (let min = 0; min < 60; min += 15) {
-                    const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                    headerHTML += `<th>${timeStr}</th>`;
-                }
-            }
+            timeSlots.forEach(slot => {
+                const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
+                headerHTML += `<th>${timeStr}</th>`;
+            });
             headerHTML += '</tr></thead>';
             
             // Generate rows for each dispatch desk
@@ -7411,16 +7456,14 @@
                 bodyHTML += `<tr><td class="desk-label">${deskLabel}</td>`;
                 
                 // For each 15-minute slot, check occupancy
-                for (let hour = 0; hour < 24; hour++) {
-                    for (let min = 0; min < 60; min += 15) {
-                        const occupancyData = calculateDeskOccupancyWithNames('dispatch', deskNum, hour, min);
-                        const occupancy = occupancyData.count;
-                        const cellClass = occupancy > 0 ? `occupied-${Math.min(occupancy, 3)}` : '';
-                        const cellValue = occupancy > 0 ? occupancy : '';
-                        const tooltip = occupancy >= 2 ? `title="${occupancyData.names.join(', ')}"` : '';
-                        bodyHTML += `<td class="${cellClass}" ${tooltip}>${cellValue}</td>`;
-                    }
-                }
+                timeSlots.forEach(slot => {
+                    const occupancyData = calculateDeskOccupancyWithNames('dispatch', deskNum, slot.hour, slot.minute, slot.isNextDay);
+                    const occupancy = occupancyData.count;
+                    const cellClass = occupancy > 0 ? `occupied-${Math.min(occupancy, 3)}` : '';
+                    const cellValue = occupancy > 0 ? occupancy : '';
+                    const tooltip = occupancy >= 2 ? `title="${occupancyData.names.join(', ')}"` : '';
+                    bodyHTML += `<td class="${cellClass}" ${tooltip}>${cellValue}</td>`;
+                });
                 
                 bodyHTML += '</tr>';
             }
@@ -7432,14 +7475,14 @@
         function generateCallTakeSeatingChart() {
             const table = document.getElementById('callTakeSeatingChart');
             
-            // Generate time headers
+            // Generate time headers (06:30 to 06:30 next day = 96 columns)
+            const timeSlots = getChartTimeSlots();
+            
             let headerHTML = '<thead><tr><th class="desk-label">Desk</th>';
-            for (let hour = 0; hour < 24; hour++) {
-                for (let min = 0; min < 60; min += 15) {
-                    const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                    headerHTML += `<th>${timeStr}</th>`;
-                }
-            }
+            timeSlots.forEach(slot => {
+                const timeStr = `${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}`;
+                headerHTML += `<th>${timeStr}</th>`;
+            });
             headerHTML += '</tr></thead>';
             
             // Generate rows for each call take desk
@@ -7450,16 +7493,14 @@
                 bodyHTML += `<tr><td class="desk-label">${deskLabel}</td>`;
                 
                 // For each 15-minute slot, check occupancy
-                for (let hour = 0; hour < 24; hour++) {
-                    for (let min = 0; min < 60; min += 15) {
-                        const occupancyData = calculateDeskOccupancyWithNames('calltake', deskNum, hour, min);
-                        const occupancy = occupancyData.count;
-                        const cellClass = occupancy > 0 ? `occupied-${Math.min(occupancy, 3)}` : '';
-                        const cellValue = occupancy > 0 ? occupancy : '';
-                        const tooltip = occupancy >= 2 ? `title="${occupancyData.names.join(', ')}"` : '';
-                        bodyHTML += `<td class="${cellClass}" ${tooltip}>${cellValue}</td>`;
-                    }
-                }
+                timeSlots.forEach(slot => {
+                    const occupancyData = calculateDeskOccupancyWithNames('calltake', deskNum, slot.hour, slot.minute, slot.isNextDay);
+                    const occupancy = occupancyData.count;
+                    const cellClass = occupancy > 0 ? `occupied-${Math.min(occupancy, 3)}` : '';
+                    const cellValue = occupancy > 0 ? occupancy : '';
+                    const tooltip = occupancy >= 2 ? `title="${occupancyData.names.join(', ')}"` : '';
+                    bodyHTML += `<td class="${cellClass}" ${tooltip}>${cellValue}</td>`;
+                });
                 
                 bodyHTML += '</tr>';
             });
@@ -7468,12 +7509,12 @@
             table.innerHTML = headerHTML + bodyHTML;
         }
 
-        function calculateDeskOccupancy(deskType, deskNum, hour, minute) {
-            const result = calculateDeskOccupancyWithNames(deskType, deskNum, hour, minute);
+        function calculateDeskOccupancy(deskType, deskNum, hour, minute, isNextDay = false) {
+            const result = calculateDeskOccupancyWithNames(deskType, deskNum, hour, minute, isNextDay);
             return result.count;
         }
 
-        function calculateDeskOccupancyWithNames(deskType, deskNum, hour, minute) {
+        function calculateDeskOccupancyWithNames(deskType, deskNum, hour, minute, isNextDay = false) {
             let count = 0;
             let names = [];
             
@@ -7481,9 +7522,21 @@
             const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
             const previousDate = getPreviousDate(selectedDate);
             
-            // Check if we should look at previous day's overnight shifts
-            // (for times in the early morning before ~08:00)
-            const checkPreviousDay = hour < 8;
+            // Determine which date(s) to check based on time slot
+            let datesToCheck;
+            if (isNextDay) {
+                // For next day time slots (0000-0630), check selected date's overnight shifts
+                datesToCheck = [{ date: selectedDate, treatAsPreviousDay: true }];
+            } else if (hour < 8) {
+                // For early morning slots on selected date, check both selected date and previous date's overnight
+                datesToCheck = [
+                    { date: selectedDate, treatAsPreviousDay: false },
+                    { date: previousDate, treatAsPreviousDay: true }
+                ];
+            } else {
+                // For normal daytime slots, just check selected date
+                datesToCheck = [{ date: selectedDate, treatAsPreviousDay: false }];
+            }
             
             // Helper to add member name
             const addMember = (memberId) => {
@@ -7497,12 +7550,7 @@
                 }
             };
             
-            // Process schedules for both current and previous date
-            const datesToCheck = checkPreviousDay ? [selectedDate, previousDate] : [selectedDate];
-            
-            datesToCheck.forEach(dateToCheck => {
-                const isFromPreviousDay = dateToCheck === previousDate;
-                
+            datesToCheck.forEach(({ date: dateToCheck, treatAsPreviousDay }) => {
                 Object.keys(state.openSeatingData).forEach(key => {
                     const schedule = state.openSeatingData[key];
                     if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
@@ -7526,7 +7574,7 @@
                         const hours = deskHoursData[deskNum];
                         const breaks = breakTimesData[deskNum];
                         
-                        if (isAgentAtDesk(memberId, hours, breaks, hour, minute, isFromPreviousDay)) {
+                        if (isAgentAtDesk(memberId, hours, breaks, hour, minute, treatAsPreviousDay)) {
                             addMember(memberId);
                         }
                     }
@@ -7539,15 +7587,15 @@
                     if (instances[deskNum]) {
                         instances[deskNum].forEach(instance => {
                             if (instance.memberId) {
-                                if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, treatAsPreviousDay)) {
                                     addMember(instance.memberId);
                                 }
                             }
                         });
                     }
                     
-                    // Check reliever duties for this schedule (only for current day)
-                    if (!isFromPreviousDay && schedule.relieverDuties) {
+                    // Check reliever duties for this schedule (only for non-previous-day checks)
+                    if (!treatAsPreviousDay && schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (reliever.memberId && reliever.schedule) {
                                 const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
