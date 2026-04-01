@@ -5083,6 +5083,28 @@
                 ? (deskLabels[baseDeskNum] || `PD${baseDeskNum}`)
                 : callTakeLabels[parseInt(baseDeskNum.substring(2)) - 1];
             
+            // For dispatch desks, include Type and Func columns
+            // For call take desks, only include Type column (no Func)
+            const typeColumn = `
+                <td>
+                    <select class="shift-type-select ${getShiftTypeClass(instance.shiftType || 'regular')}" 
+                            onchange="updateInstanceShiftType('${instance.id}', this.value, '${deskType}')">
+                        <option value="regular" ${(instance.shiftType || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
+                        <option value="callback" ${instance.shiftType === 'callback' ? 'selected' : ''}>CB</option>
+                    </select>
+                </td>
+            `;
+            
+            const funcColumn = deskType === 'dispatch' ? `
+                <td>
+                    <select class="desk-func-select ${getDeskFuncClass(instance.deskFunction || 'dispatch')}" 
+                            onchange="updateInstanceDeskFunction('${instance.id}', this.value)">
+                        <option value="dispatch" ${(instance.deskFunction || 'dispatch') === 'dispatch' ? 'selected' : ''}>Disp</option>
+                        <option value="calltake" ${instance.deskFunction === 'calltake' ? 'selected' : ''}>CT</option>
+                    </select>
+                </td>
+            ` : '';
+            
             row.innerHTML = `
                 <td style="text-align: center;">
                     <button class="desk-status-btn broken" 
@@ -5106,6 +5128,8 @@
                         <div class="autocomplete-dropdown" data-desk="${instance.id}" data-type="${deskType}"></div>
                     </div>
                 </td>
+                ${typeColumn}
+                ${funcColumn}
                 <td>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
@@ -5291,6 +5315,40 @@
                     break;
                 }
             }
+        }
+        
+        // Update instance shift type
+        function updateInstanceShiftType(instanceId, value, deskType) {
+            const instancesState = deskType === 'dispatch' ? state.deskInstances : state.callTakeDeskInstances;
+            
+            for (const baseDeskNum in instancesState) {
+                const instance = instancesState[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    instance.shiftType = value;
+                    break;
+                }
+            }
+            
+            // Re-render to update styling
+            if (deskType === 'dispatch') {
+                initializeDeskTable();
+            } else {
+                initializeCallTakeTable();
+            }
+        }
+        
+        // Update instance desk function (dispatch only)
+        function updateInstanceDeskFunction(instanceId, value) {
+            for (const baseDeskNum in state.deskInstances) {
+                const instance = state.deskInstances[baseDeskNum].find(i => i.id === instanceId);
+                if (instance) {
+                    instance.deskFunction = value;
+                    break;
+                }
+            }
+            
+            // Re-render to update styling
+            initializeDeskTable();
         }
 
         function initializeCallTakeTable() {
