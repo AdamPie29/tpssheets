@@ -4805,8 +4805,12 @@
             const selectedPlatoon = platoonFilter ? platoonFilter.value : '';
             
             // Get all members from master personnel, filtered by platoon if selected
+            // Exclude members with SOS or OS certifications (they appear in SOS/OS section only)
             let availableMembers = masterPersonnel.filter(member => {
                 if (selectedPlatoon && member.platoon !== selectedPlatoon) {
+                    return false;
+                }
+                if (member.tags && (member.tags.includes('SOS') || member.tags.includes('OS'))) {
                     return false;
                 }
                 return true;
@@ -5504,13 +5508,19 @@
         // Build autocomplete list
         function buildAutocompleteList(dropdown, filter, deskNum, deskType) {
             // Get appropriate members based on desk type
+            // Exclude SOS/OS members from dispatch and call take assignments
             let availableMembers;
             if (deskType === 'dispatch') {
-                // Only dispatchers for dispatch desks
-                availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
+                // Only dispatchers for dispatch desks, exclude SOS/OS
+                availableMembers = masterPersonnel.filter(m => 
+                    m.tags && m.tags.includes('Dispatcher') && 
+                    !m.tags.includes('SOS') && !m.tags.includes('OS')
+                );
             } else {
-                // All members for call take desks
-                availableMembers = masterPersonnel;
+                // All members for call take desks, exclude SOS/OS
+                availableMembers = masterPersonnel.filter(m => 
+                    !m.tags || (!m.tags.includes('SOS') && !m.tags.includes('OS'))
+                );
             }
             
             // Sort by name
@@ -6767,8 +6777,11 @@
         
         // Build reliever autocomplete list
         function buildRelieverAutocompleteList(dropdown, filter, relieverId) {
-            // Get dispatcher-certified members
-            let availableMembers = masterPersonnel.filter(m => m.tags && m.tags.includes('Dispatcher'));
+            // Get dispatcher-certified members, exclude SOS/OS
+            let availableMembers = masterPersonnel.filter(m => 
+                m.tags && m.tags.includes('Dispatcher') && 
+                !m.tags.includes('SOS') && !m.tags.includes('OS')
+            );
             
             // Sort by name
             availableMembers = [...availableMembers].sort((a, b) => a.name.localeCompare(b.name));
@@ -7143,147 +7156,121 @@
             
             // Get the selected date for filtering
             const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+            const previousDate = getPreviousDate(selectedDate);
             
-            // Loop through saved schedules, filtering by selected date
-            Object.keys(state.openSeatingData).forEach(key => {
-                const schedule = state.openSeatingData[key];
-                if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
-                
-                // Only show schedules for the selected date
-                if (schedule.date !== selectedDate) return;
-                
-                if (deskType === 'dispatch') {
-                    const memberId = schedule.dispatchDesks.assignments?.[deskNum];
-                    if (memberId) {
-                        const deskHours = schedule.dispatchDesks.deskHours?.[deskNum];
-                        const breakTimes = schedule.dispatchDesks.breakTimes?.[deskNum];
-                        
-                        if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
-                            const member = masterPersonnel.find(m => m.id === memberId);
-                            if (member) {
-                                // Get last name and first initial (format: "Last, First" -> "Last, F.")
-                                const nameParts = member.name.split(',');
-                                const lastName = nameParts[0].trim();
-                                const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                agents.push(`${lastName}, ${firstInitial}`);
-                            }
-                        }
-                    }
-                    
-                    // Also check desk instances
-                    if (schedule.dispatchDesks.instances) {
-                        const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
-                        const instances = schedule.dispatchDesks.instances[baseDeskNum] || [];
-                        instances.forEach(instance => {
-                            if (instance.memberId) {
-                                const instHours = instance.hours;
-                                const instBreaks = instance.breakTimes;
-                                
-                                if (isAgentAtDesk(instance.memberId, instHours, instBreaks, hour, minute)) {
-                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
-                                    if (member) {
-                                        const nameParts = member.name.split(',');
-                                        const lastName = nameParts[0].trim();
-                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
-                                            agents.push(`${lastName}, ${firstInitial}`);
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-                } else if (deskType === 'calltake') {
-                    const memberId = schedule.callTakeDesks.assignments?.[deskNum];
-                    if (memberId) {
-                        const deskHours = schedule.callTakeDesks.deskHours?.[deskNum];
-                        const breakTimes = schedule.callTakeDesks.breakTimes?.[deskNum];
-                        
-                        if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute)) {
-                            const member = masterPersonnel.find(m => m.id === memberId);
-                            if (member) {
-                                const nameParts = member.name.split(',');
-                                const lastName = nameParts[0].trim();
-                                const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                agents.push(`${lastName}, ${firstInitial}`);
-                            }
-                        }
-                    }
-                    
-                    // Also check desk instances
-                    if (schedule.callTakeDesks.instances) {
-                        const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
-                        const instances = schedule.callTakeDesks.instances[baseDeskNum] || [];
-                        instances.forEach(instance => {
-                            if (instance.memberId) {
-                                const instHours = instance.hours;
-                                const instBreaks = instance.breakTimes;
-                                
-                                if (isAgentAtDesk(instance.memberId, instHours, instBreaks, hour, minute)) {
-                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
-                                    if (member) {
-                                        const nameParts = member.name.split(',');
-                                        const lastName = nameParts[0].trim();
-                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
-                                            agents.push(`${lastName}, ${firstInitial}`);
-                                        }
-                                    }
-                                }
-                            }
-                        });
+            // Check if we should look at previous day's overnight shifts
+            // (for times in the early morning before ~08:00)
+            const checkPreviousDay = hour < 8;
+            
+            // Helper to add agent name if not already in list
+            const addAgent = (memberId) => {
+                const member = masterPersonnel.find(m => m.id === memberId);
+                if (member) {
+                    const nameParts = member.name.split(',');
+                    const lastName = nameParts[0].trim();
+                    const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                    const agentName = `${lastName}, ${firstInitial}`;
+                    if (!agents.includes(agentName)) {
+                        agents.push(agentName);
                     }
                 }
+            };
+            
+            // Process schedules for both current and previous date
+            const datesToCheck = checkPreviousDay ? [selectedDate, previousDate] : [selectedDate];
+            
+            datesToCheck.forEach(dateToCheck => {
+                const isFromPreviousDay = dateToCheck === previousDate;
                 
-                // Check reliever assignments from saved schedule
-                if (schedule.relieverDuties) {
-                    schedule.relieverDuties.forEach(reliever => {
-                        if (!reliever.memberId || !reliever.schedule) return;
-                        
-                        const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
-                        const assignedDesk = reliever.schedule[timeKey];
-                        
-                        if (assignedDesk) {
-                            const deskUpper = assignedDesk.toUpperCase();
+                Object.keys(state.openSeatingData).forEach(key => {
+                    const schedule = state.openSeatingData[key];
+                    if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
+                    
+                    // Only process schedules for the date we're checking
+                    if (schedule.date !== dateToCheck) return;
+                    
+                    if (deskType === 'dispatch') {
+                        const memberId = schedule.dispatchDesks.assignments?.[deskNum];
+                        if (memberId) {
+                            const deskHours = schedule.dispatchDesks.deskHours?.[deskNum];
+                            const breakTimes = schedule.dispatchDesks.breakTimes?.[deskNum];
                             
-                            if (deskType === 'dispatch') {
-                                const match = deskUpper.match(/(?:PD)?(\d{2})/);
-                                if (match && match[1] === deskNum) {
-                                    const member = masterPersonnel.find(m => m.id === reliever.memberId);
-                                    if (member) {
-                                        const nameParts = member.name.split(',');
-                                        const lastName = nameParts[0].trim();
-                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
-                                            agents.push(`${lastName}, ${firstInitial}`);
-                                        }
+                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, isFromPreviousDay)) {
+                                addAgent(memberId);
+                            }
+                        }
+                        
+                        // Also check desk instances
+                        if (schedule.dispatchDesks.instances) {
+                            const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
+                            const instances = schedule.dispatchDesks.instances[baseDeskNum] || [];
+                            instances.forEach(instance => {
+                                if (instance.memberId) {
+                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                        addAgent(instance.memberId);
                                     }
                                 }
-                            } else if (deskType === 'calltake') {
-                                const ctIndex = parseInt(deskNum.substring(2)) - 1;
-                                const expectedLabel = callTakeLabels[ctIndex];
-                                if (deskUpper === expectedLabel || deskUpper === deskNum) {
-                                    const member = masterPersonnel.find(m => m.id === reliever.memberId);
-                                    if (member) {
-                                        const nameParts = member.name.split(',');
-                                        const lastName = nameParts[0].trim();
-                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                        if (!agents.includes(`${lastName}, ${firstInitial}`)) {
-                                            agents.push(`${lastName}, ${firstInitial}`);
-                                        }
+                            });
+                        }
+                    } else if (deskType === 'calltake') {
+                        const memberId = schedule.callTakeDesks.assignments?.[deskNum];
+                        if (memberId) {
+                            const deskHours = schedule.callTakeDesks.deskHours?.[deskNum];
+                            const breakTimes = schedule.callTakeDesks.breakTimes?.[deskNum];
+                            
+                            if (isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, isFromPreviousDay)) {
+                                addAgent(memberId);
+                            }
+                        }
+                        
+                        // Also check desk instances
+                        if (schedule.callTakeDesks.instances) {
+                            const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
+                            const instances = schedule.callTakeDesks.instances[baseDeskNum] || [];
+                            instances.forEach(instance => {
+                                if (instance.memberId) {
+                                    if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                        addAgent(instance.memberId);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    
+                    // Check reliever assignments from saved schedule (only for current day, relievers don't typically span overnight)
+                    if (!isFromPreviousDay && schedule.relieverDuties) {
+                        schedule.relieverDuties.forEach(reliever => {
+                            if (!reliever.memberId || !reliever.schedule) return;
+                            
+                            const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                            const assignedDesk = reliever.schedule[timeKey];
+                            
+                            if (assignedDesk) {
+                                const deskUpper = assignedDesk.toUpperCase();
+                                
+                                if (deskType === 'dispatch') {
+                                    const match = deskUpper.match(/(?:PD)?(\d{2})/);
+                                    if (match && match[1] === deskNum) {
+                                        addAgent(reliever.memberId);
+                                    }
+                                } else if (deskType === 'calltake') {
+                                    const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                    const expectedLabel = callTakeLabels[ctIndex];
+                                    if (deskUpper === expectedLabel || deskUpper === deskNum) {
+                                        addAgent(reliever.memberId);
                                     }
                                 }
                             }
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             });
             
             return agents;
         }
 
-        function isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute) {
-            if (!deskHours) return false;
+        function isAgentAtDesk(memberId, deskHours, breakTimes, hour, minute, isFromPreviousDay = false) {
+            if (!deskHours || !deskHours.start || !deskHours.end) return false;
             
             const checkTime = hour * 60 + minute;
             const [startHour, startMin] = deskHours.start.split(':').map(Number);
@@ -7291,9 +7278,62 @@
             let startTime = startHour * 60 + startMin;
             let endTime = endHour * 60 + endMin;
             
-            // Handle overnight shifts
+            // Check if this is an overnight shift (end time is less than start time)
+            const isOvernightShift = endTime < startTime;
+            
+            if (isFromPreviousDay) {
+                // For previous day's schedule, only consider overnight shifts
+                // and only check the after-midnight portion
+                if (!isOvernightShift) return false;
+                
+                // For overnight shifts from previous day, check if current time is 
+                // in the after-midnight portion (0:00 to end time)
+                if (checkTime < endTime) {
+                    // Check breaks that occur after midnight
+                    if (breakTimes) {
+                        if (breakTimes.break1) {
+                            const [b1Hour, b1Min] = breakTimes.break1.split(':').map(Number);
+                            const break1Start = b1Hour * 60 + b1Min;
+                            // Only check breaks that occur after midnight
+                            if (break1Start < endTime) {
+                                const break1End = break1Start + 15;
+                                if (checkTime >= break1Start && checkTime < break1End) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        if (breakTimes.lunch && breakTimes.tibOption === 'na') {
+                            const [lunchHour, lunchMin] = breakTimes.lunch.split(':').map(Number);
+                            const lunchStart = lunchHour * 60 + lunchMin;
+                            if (lunchStart < endTime) {
+                                const lunchDuration = breakTimes.plus15Enabled ? 60 : 45;
+                                const lunchEnd = lunchStart + lunchDuration;
+                                if (checkTime >= lunchStart && checkTime < lunchEnd) {
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        if (breakTimes.break2) {
+                            const [b2Hour, b2Min] = breakTimes.break2.split(':').map(Number);
+                            const break2Start = b2Hour * 60 + b2Min;
+                            if (break2Start < endTime) {
+                                const break2End = break2Start + 15;
+                                if (checkTime >= break2Start && checkTime < break2End) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+            
+            // Standard same-day logic
             let adjustedCheckTime = checkTime;
-            if (endTime < startTime) {
+            if (isOvernightShift) {
                 endTime += 24 * 60;
                 if (adjustedCheckTime < startTime) {
                     adjustedCheckTime += 24 * 60;
@@ -7340,6 +7380,13 @@
             }
             
             return false;
+        }
+        
+        // Helper to get previous date string
+        function getPreviousDate(dateString) {
+            const date = new Date(dateString + 'T12:00:00'); // Use noon to avoid timezone issues
+            date.setDate(date.getDate() - 1);
+            return date.toISOString().split('T')[0];
         }
 
         function generateDispatchSeatingChart() {
@@ -7432,208 +7479,100 @@
             
             // Get the selected date
             const selectedDate = document.getElementById('scheduleDate')?.value || state.scheduleDate;
+            const previousDate = getPreviousDate(selectedDate);
             
-            // Loop through saved schedules, filtering by selected date
-            Object.keys(state.openSeatingData).forEach(key => {
-                const schedule = state.openSeatingData[key];
-                if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
+            // Check if we should look at previous day's overnight shifts
+            // (for times in the early morning before ~08:00)
+            const checkPreviousDay = hour < 8;
+            
+            // Helper to add member name
+            const addMember = (memberId) => {
+                count++;
+                const member = masterPersonnel.find(m => m.id === memberId);
+                if (member) {
+                    const nameParts = member.name.split(',');
+                    const lastName = nameParts[0].trim();
+                    const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
+                    names.push(`${lastName}, ${firstInitial}`);
+                }
+            };
+            
+            // Process schedules for both current and previous date
+            const datesToCheck = checkPreviousDay ? [selectedDate, previousDate] : [selectedDate];
+            
+            datesToCheck.forEach(dateToCheck => {
+                const isFromPreviousDay = dateToCheck === previousDate;
                 
-                // Only show schedules for the selected date
-                if (schedule.date !== selectedDate) return;
-                
-                const assignments = deskType === 'dispatch' 
-                    ? (schedule.dispatchDesks.assignments || {})
-                    : (schedule.callTakeDesks.assignments || {});
-                const deskHours = deskType === 'dispatch'
-                    ? (schedule.dispatchDesks.deskHours || {})
-                    : (schedule.callTakeDesks.deskHours || {});
-                const breakTimes = deskType === 'dispatch'
-                    ? (schedule.dispatchDesks.breakTimes || {})
-                    : (schedule.callTakeDesks.breakTimes || {});
-                
-                // Check if this desk has a regular assignment
-                const memberId = assignments[deskNum];
-                if (memberId) {
-                    const hours = deskHours[deskNum];
-                    const breaks = breakTimes[deskNum];
+                Object.keys(state.openSeatingData).forEach(key => {
+                    const schedule = state.openSeatingData[key];
+                    if (!schedule || !schedule.dispatchDesks || !schedule.callTakeDesks) return;
                     
-                    if (hours && hours.start && hours.end) {
-                        const checkTime = hour * 60 + minute;
-                        const [startHour, startMin] = hours.start.split(':').map(Number);
-                        const [endHour, endMin] = hours.end.split(':').map(Number);
-                        let startTime = startHour * 60 + startMin;
-                        let endTime = endHour * 60 + endMin;
+                    // Only process schedules for the date we're checking
+                    if (schedule.date !== dateToCheck) return;
+                    
+                    const assignments = deskType === 'dispatch' 
+                        ? (schedule.dispatchDesks.assignments || {})
+                        : (schedule.callTakeDesks.assignments || {});
+                    const deskHoursData = deskType === 'dispatch'
+                        ? (schedule.dispatchDesks.deskHours || {})
+                        : (schedule.callTakeDesks.deskHours || {});
+                    const breakTimesData = deskType === 'dispatch'
+                        ? (schedule.dispatchDesks.breakTimes || {})
+                        : (schedule.callTakeDesks.breakTimes || {});
+                    
+                    // Check if this desk has a regular assignment
+                    const memberId = assignments[deskNum];
+                    if (memberId) {
+                        const hours = deskHoursData[deskNum];
+                        const breaks = breakTimesData[deskNum];
                         
-                        // Handle overnight shifts
-                        let adjustedCheckTime = checkTime;
-                        if (endTime < startTime) {
-                            endTime += 24 * 60;
-                            if (adjustedCheckTime < startTime) {
-                                adjustedCheckTime += 24 * 60;
-                            }
-                        }
-                        
-                        // Check if within working hours
-                        if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
-                            // Now check if they're on a break
-                            let onBreak = false;
-                            
-                            if (breaks) {
-                                // Check Break 1 (15 minutes)
-                                if (breaks.break1) {
-                                    const [b1Hour, b1Min] = breaks.break1.split(':').map(Number);
-                                    const break1Start = b1Hour * 60 + b1Min;
-                                    const break1End = break1Start + 15;
-                                    if (checkTime >= break1Start && checkTime < break1End) {
-                                        onBreak = true;
-                                    }
-                                }
-                                
-                                // Check Lunch (45 minutes, or 60 if +15 enabled)
-                                if (breaks.lunch && breaks.tibOption === 'na') {
-                                    const [lunchHour, lunchMin] = breaks.lunch.split(':').map(Number);
-                                    const lunchStart = lunchHour * 60 + lunchMin;
-                                    const lunchDuration = breaks.plus15Enabled ? 60 : 45;
-                                    const lunchEnd = lunchStart + lunchDuration;
-                                    if (checkTime >= lunchStart && checkTime < lunchEnd) {
-                                        onBreak = true;
-                                    }
-                                }
-                                
-                                // Check Break 2 (15 minutes)
-                                if (breaks.break2) {
-                                    const [b2Hour, b2Min] = breaks.break2.split(':').map(Number);
-                                    const break2Start = b2Hour * 60 + b2Min;
-                                    const break2End = break2Start + 15;
-                                    if (checkTime >= break2Start && checkTime < break2End) {
-                                        onBreak = true;
-                                    }
-                                }
-                            }
-                            
-                            // Only count if not on break
-                            if (!onBreak) {
-                                count++;
-                                const member = masterPersonnel.find(m => m.id === memberId);
-                                if (member) {
-                                    const nameParts = member.name.split(',');
-                                    const lastName = nameParts[0].trim();
-                                    const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                    names.push(`${lastName}, ${firstInitial}`);
-                                }
-                            }
+                        if (isAgentAtDesk(memberId, hours, breaks, hour, minute, isFromPreviousDay)) {
+                            addMember(memberId);
                         }
                     }
-                }
-                
-                // Check desk instances for this schedule
-                const instances = deskType === 'dispatch'
-                    ? (schedule.dispatchDesks.instances || {})
-                    : (schedule.callTakeDesks.instances || {});
-                
-                // Check instances for this base desk
-                if (instances[deskNum]) {
-                    instances[deskNum].forEach(instance => {
-                        if (!instance.memberId) return;
-                        
-                        const instHours = instance.hours;
-                        const instBreaks = instance.breakTimes;
-                        
-                        if (instHours && instHours.start && instHours.end) {
-                            const checkTime = hour * 60 + minute;
-                            const [startHour, startMin] = instHours.start.split(':').map(Number);
-                            const [endHour, endMin] = instHours.end.split(':').map(Number);
-                            let startTime = startHour * 60 + startMin;
-                            let endTime = endHour * 60 + endMin;
-                            
-                            let adjustedCheckTime = checkTime;
-                            if (endTime < startTime) {
-                                endTime += 24 * 60;
-                                if (adjustedCheckTime < startTime) {
-                                    adjustedCheckTime += 24 * 60;
+                    
+                    // Check desk instances for this schedule
+                    const instances = deskType === 'dispatch'
+                        ? (schedule.dispatchDesks.instances || {})
+                        : (schedule.callTakeDesks.instances || {});
+                    
+                    if (instances[deskNum]) {
+                        instances[deskNum].forEach(instance => {
+                            if (instance.memberId) {
+                                if (isAgentAtDesk(instance.memberId, instance.hours, instance.breakTimes, hour, minute, isFromPreviousDay)) {
+                                    addMember(instance.memberId);
                                 }
                             }
-                            
-                            if (adjustedCheckTime >= startTime && adjustedCheckTime < endTime) {
-                                let onBreak = false;
+                        });
+                    }
+                    
+                    // Check reliever duties for this schedule (only for current day)
+                    if (!isFromPreviousDay && schedule.relieverDuties) {
+                        schedule.relieverDuties.forEach(reliever => {
+                            if (reliever.memberId && reliever.schedule) {
+                                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                                const assignedDesk = reliever.schedule[timeKey];
                                 
-                                if (instBreaks) {
-                                    if (instBreaks.break1) {
-                                        const [b1Hour, b1Min] = instBreaks.break1.split(':').map(Number);
-                                        const break1Start = b1Hour * 60 + b1Min;
-                                        const break1End = break1Start + 15;
-                                        if (checkTime >= break1Start && checkTime < break1End) onBreak = true;
-                                    }
-                                    if (instBreaks.lunch && instBreaks.tibOption === 'na') {
-                                        const [lunchHour, lunchMin] = instBreaks.lunch.split(':').map(Number);
-                                        const lunchStart = lunchHour * 60 + lunchMin;
-                                        const lunchDuration = instBreaks.plus15Enabled ? 60 : 45;
-                                        const lunchEnd = lunchStart + lunchDuration;
-                                        if (checkTime >= lunchStart && checkTime < lunchEnd) onBreak = true;
-                                    }
-                                    if (instBreaks.break2) {
-                                        const [b2Hour, b2Min] = instBreaks.break2.split(':').map(Number);
-                                        const break2Start = b2Hour * 60 + b2Min;
-                                        const break2End = break2Start + 15;
-                                        if (checkTime >= break2Start && checkTime < break2End) onBreak = true;
-                                    }
-                                }
-                                
-                                if (!onBreak) {
-                                    count++;
-                                    const member = masterPersonnel.find(m => m.id === instance.memberId);
-                                    if (member) {
-                                        const nameParts = member.name.split(',');
-                                        const lastName = nameParts[0].trim();
-                                        const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                        names.push(`${lastName}, ${firstInitial}`);
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                
-                // Check reliever duties for this schedule
-                if (schedule.relieverDuties) {
-                    schedule.relieverDuties.forEach(reliever => {
-                        if (reliever.memberId && reliever.schedule) {
-                            const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
-                            const assignedDesk = reliever.schedule[timeKey];
-                            
-                            if (assignedDesk) {
-                                const deskUpper = assignedDesk.toUpperCase();
-                                
-                                if (deskType === 'dispatch') {
-                                    const match = deskUpper.match(/(?:PD)?(\d{2})/);
-                                    if (match && match[1] === deskNum) {
-                                        count++;
-                                        const member = masterPersonnel.find(m => m.id === reliever.memberId);
-                                        if (member) {
-                                            const nameParts = member.name.split(',');
-                                            const lastName = nameParts[0].trim();
-                                            const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                            names.push(`${lastName}, ${firstInitial}`);
+                                if (assignedDesk) {
+                                    const deskUpper = assignedDesk.toUpperCase();
+                                    
+                                    if (deskType === 'dispatch') {
+                                        const match = deskUpper.match(/(?:PD)?(\d{2})/);
+                                        if (match && match[1] === deskNum) {
+                                            addMember(reliever.memberId);
                                         }
-                                    }
-                                } else if (deskType === 'calltake') {
-                                    const ctIndex = parseInt(deskNum.substring(2)) - 1;
-                                    const expectedLabel = callTakeLabels[ctIndex];
-                                    if (deskUpper === expectedLabel) {
-                                        count++;
-                                        const member = masterPersonnel.find(m => m.id === reliever.memberId);
-                                        if (member) {
-                                            const nameParts = member.name.split(',');
-                                            const lastName = nameParts[0].trim();
-                                            const firstInitial = nameParts[1] ? nameParts[1].trim().charAt(0) + '.' : '';
-                                            names.push(`${lastName}, ${firstInitial}`);
+                                    } else if (deskType === 'calltake') {
+                                        const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                        const expectedLabel = callTakeLabels[ctIndex];
+                                        if (deskUpper === expectedLabel) {
+                                            addMember(reliever.memberId);
                                         }
                                     }
                                 }
                             }
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             });
             
             return { count, names };
