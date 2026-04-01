@@ -947,6 +947,12 @@
             border-color: #ffc107;
             color: #d4a106;
         }
+        
+        .shift-type-select.type-overtime {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
 
         /* Desk Function Selector Styles */
         .desk-func-select {
@@ -1979,6 +1985,195 @@
             opacity: 0.6;
         }
 
+        /* Find Section Styles */
+        .find-search-controls {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .find-search-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .find-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .find-field-separator {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 0.5rem;
+            align-self: center;
+            margin-bottom: 0.25rem;
+        }
+
+        .find-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .find-autocomplete-wrapper {
+            position: relative;
+            min-width: 250px;
+        }
+
+        .find-member-input {
+            width: 100%;
+            padding: 0.6rem 2rem 0.6rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .find-member-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .find-autocomplete-wrapper .clear-assignment-btn {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .find-autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .find-autocomplete-dropdown.active {
+            display: block;
+        }
+
+        .find-autocomplete-item {
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .find-autocomplete-item:hover {
+            background: var(--primary-light);
+        }
+
+        .find-autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .find-date-input {
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            min-width: 150px;
+        }
+
+        .find-date-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .find-search-btn {
+            padding: 0.6rem 1.5rem;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .find-results-container {
+            min-height: 300px;
+        }
+
+        .find-no-results {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 3rem;
+            font-size: 1rem;
+        }
+
+        .find-results {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .find-result-card {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .find-result-date {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .find-result-assignments {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .find-result-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            align-items: center;
+        }
+
+        .find-result-label {
+            font-weight: 600;
+            color: var(--accent);
+            min-width: 100px;
+        }
+
+        .find-result-value {
+            color: var(--text-primary);
+        }
+
+        .find-result-detail {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .find-result-empty {
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 0.5rem;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -2214,6 +2409,10 @@
                             Notes
                             <span class="nav-count" id="notesCount">Daily Notes</span>
                         </button>
+                        <button class="desk-nav-btn" id="navFind" onclick="showDeskSection('find')">
+                            Find
+                            <span class="nav-count" id="findCount">Search</span>
+                        </button>
                     </div>
 
                     <div class="desk-content-area">
@@ -2391,6 +2590,62 @@
                                 <h2 class="card-title">Daily Notes</h2>
                                 <div class="notes-date-header" id="notesDateHeader"></div>
                                 <div class="notes-grid" id="notesGrid"></div>
+                            </div>
+                        </div>
+
+                        <!-- Find Section -->
+                        <div id="sectionFind" class="desk-section">
+                            <div class="card">
+                                <h2 class="card-title">Find Member Schedule</h2>
+                                
+                                <!-- Search Controls -->
+                                <div class="find-search-controls">
+                                    <div class="find-search-row">
+                                        <div class="find-field">
+                                            <label class="find-label">Search Member</label>
+                                            <div class="find-autocomplete-wrapper">
+                                                <input type="text" class="find-member-input" id="findMemberInput"
+                                                       placeholder="Type surname..." 
+                                                       onfocus="showFindMemberDropdown()"
+                                                       oninput="filterFindMemberDropdown()">
+                                                <button class="clear-assignment-btn" onclick="clearFindMember()" title="Clear">×</button>
+                                                <div class="find-autocomplete-dropdown" id="findMemberDropdown"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="find-field">
+                                            <label class="find-label">Single Date</label>
+                                            <input type="date" class="find-date-input" id="findSingleDate">
+                                        </div>
+                                        
+                                        <div class="find-field-separator">— OR —</div>
+                                        
+                                        <div class="find-field">
+                                            <label class="find-label">From Date</label>
+                                            <input type="date" class="find-date-input" id="findFromDate">
+                                        </div>
+                                        
+                                        <div class="find-field">
+                                            <label class="find-label">To Date</label>
+                                            <input type="date" class="find-date-input" id="findToDate">
+                                        </div>
+                                        
+                                        <div class="find-field">
+                                            <label class="find-label">&nbsp;</label>
+                                            <button class="btn btn-primary find-search-btn" onclick="executeFindSearch()">
+                                                🔍 Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Search Results -->
+                                <div class="find-results-container" id="findResultsContainer">
+                                    <div class="find-no-results" id="findNoResults">
+                                        Select a member and date(s) to search for their scheduled assignments.
+                                    </div>
+                                    <div class="find-results" id="findResults"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3805,6 +4060,330 @@
             }
         }
 
+        // Find Functions
+        let selectedFindMember = null;
+
+        function showFindMemberDropdown() {
+            const dropdown = document.getElementById('findMemberDropdown');
+            const input = document.getElementById('findMemberInput');
+            
+            dropdown.innerHTML = '';
+            
+            // Build list of all personnel
+            const sortedPersonnel = [...masterPersonnel].sort((a, b) => a.name.localeCompare(b.name));
+            
+            sortedPersonnel.forEach(member => {
+                const item = document.createElement('div');
+                item.className = 'find-autocomplete-item';
+                item.innerHTML = `
+                    <span>${member.name}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">${member.platoon} · ${member.badge}</span>
+                `;
+                item.onclick = () => selectFindMember(member);
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.classList.add('active');
+            
+            // Close on click outside
+            document.addEventListener('click', closeFindDropdownOnClickOutside);
+        }
+
+        function filterFindMemberDropdown() {
+            const dropdown = document.getElementById('findMemberDropdown');
+            const input = document.getElementById('findMemberInput');
+            const filter = input.value.toLowerCase();
+            
+            dropdown.innerHTML = '';
+            
+            const sortedPersonnel = [...masterPersonnel]
+                .filter(m => m.name.toLowerCase().includes(filter))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            sortedPersonnel.forEach(member => {
+                const item = document.createElement('div');
+                item.className = 'find-autocomplete-item';
+                item.innerHTML = `
+                    <span>${member.name}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">${member.platoon} · ${member.badge}</span>
+                `;
+                item.onclick = () => selectFindMember(member);
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.classList.add('active');
+        }
+
+        function selectFindMember(member) {
+            selectedFindMember = member;
+            const input = document.getElementById('findMemberInput');
+            input.value = member.name;
+            document.getElementById('findMemberDropdown').classList.remove('active');
+            document.removeEventListener('click', closeFindDropdownOnClickOutside);
+        }
+
+        function clearFindMember() {
+            selectedFindMember = null;
+            document.getElementById('findMemberInput').value = '';
+            document.getElementById('findResults').innerHTML = '';
+            document.getElementById('findNoResults').style.display = 'block';
+        }
+
+        function closeFindDropdownOnClickOutside(e) {
+            const wrapper = document.querySelector('.find-autocomplete-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                document.getElementById('findMemberDropdown').classList.remove('active');
+                document.removeEventListener('click', closeFindDropdownOnClickOutside);
+            }
+        }
+
+        function executeFindSearch() {
+            if (!selectedFindMember) {
+                alert('Please select a member to search for.');
+                return;
+            }
+            
+            const singleDate = document.getElementById('findSingleDate').value;
+            const fromDate = document.getElementById('findFromDate').value;
+            const toDate = document.getElementById('findToDate').value;
+            
+            let datesToSearch = [];
+            
+            if (singleDate) {
+                datesToSearch = [singleDate];
+            } else if (fromDate && toDate) {
+                // Generate array of dates between from and to
+                const start = new Date(fromDate + 'T12:00:00');
+                const end = new Date(toDate + 'T12:00:00');
+                
+                if (start > end) {
+                    alert('From Date must be before To Date.');
+                    return;
+                }
+                
+                const current = new Date(start);
+                while (current <= end) {
+                    datesToSearch.push(current.toISOString().split('T')[0]);
+                    current.setDate(current.getDate() + 1);
+                }
+            } else {
+                alert('Please select a single date or a date range.');
+                return;
+            }
+            
+            // Search for member assignments in the date range
+            const results = searchMemberAssignments(selectedFindMember.id, datesToSearch);
+            displayFindResults(results, selectedFindMember);
+        }
+
+        function searchMemberAssignments(memberId, dates) {
+            const results = [];
+            
+            dates.forEach(date => {
+                const dateResult = {
+                    date: date,
+                    assignments: []
+                };
+                
+                // Search through all saved schedules for this date
+                Object.keys(state.openSeatingData).forEach(key => {
+                    const schedule = state.openSeatingData[key];
+                    if (!schedule || schedule.date !== date) return;
+                    
+                    // Check dispatch desks
+                    if (schedule.dispatchDesks?.assignments) {
+                        Object.keys(schedule.dispatchDesks.assignments).forEach(deskNum => {
+                            if (schedule.dispatchDesks.assignments[deskNum] === memberId) {
+                                const hours = schedule.dispatchDesks.deskHours?.[deskNum];
+                                const breaks = schedule.dispatchDesks.breakTimes?.[deskNum];
+                                const shiftType = schedule.shiftTypes?.[deskNum] || 'regular';
+                                const deskFunc = schedule.deskFunctions?.[deskNum] || 'dispatch';
+                                
+                                dateResult.assignments.push({
+                                    type: 'Dispatch',
+                                    position: deskLabels[deskNum] || `PD${deskNum}`,
+                                    hours: hours ? `${hours.start} - ${hours.end}` : 'N/A',
+                                    breaks: formatBreaks(breaks),
+                                    shiftType: shiftType,
+                                    deskFunction: deskFunc
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Check dispatch instances
+                    if (schedule.dispatchDesks?.instances) {
+                        Object.keys(schedule.dispatchDesks.instances).forEach(baseDeskNum => {
+                            schedule.dispatchDesks.instances[baseDeskNum].forEach(instance => {
+                                if (instance.memberId === memberId) {
+                                    dateResult.assignments.push({
+                                        type: 'Dispatch',
+                                        position: `${deskLabels[baseDeskNum] || `PD${baseDeskNum}`} (#${instance.instanceNum})`,
+                                        hours: instance.hours ? `${instance.hours.start} - ${instance.hours.end}` : 'N/A',
+                                        breaks: formatBreaks(instance.breakTimes),
+                                        shiftType: instance.shiftType || 'regular',
+                                        deskFunction: instance.deskFunction || 'dispatch'
+                                    });
+                                }
+                            });
+                        });
+                    }
+                    
+                    // Check call take desks
+                    if (schedule.callTakeDesks?.assignments) {
+                        Object.keys(schedule.callTakeDesks.assignments).forEach(deskNum => {
+                            if (schedule.callTakeDesks.assignments[deskNum] === memberId) {
+                                const hours = schedule.callTakeDesks.deskHours?.[deskNum];
+                                const breaks = schedule.callTakeDesks.breakTimes?.[deskNum];
+                                const shiftType = schedule.callTakeShiftTypes?.[deskNum] || 'regular';
+                                const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                                
+                                dateResult.assignments.push({
+                                    type: 'Call Take',
+                                    position: callTakeLabels[ctIndex] || deskNum,
+                                    hours: hours ? `${hours.start} - ${hours.end}` : 'N/A',
+                                    breaks: formatBreaks(breaks),
+                                    shiftType: shiftType,
+                                    deskFunction: 'calltake'
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Check call take instances
+                    if (schedule.callTakeDesks?.instances) {
+                        Object.keys(schedule.callTakeDesks.instances).forEach(baseDeskNum => {
+                            schedule.callTakeDesks.instances[baseDeskNum].forEach(instance => {
+                                if (instance.memberId === memberId) {
+                                    const ctIndex = parseInt(baseDeskNum.substring(2)) - 1;
+                                    dateResult.assignments.push({
+                                        type: 'Call Take',
+                                        position: `${callTakeLabels[ctIndex] || baseDeskNum} (#${instance.instanceNum})`,
+                                        hours: instance.hours ? `${instance.hours.start} - ${instance.hours.end}` : 'N/A',
+                                        breaks: formatBreaks(instance.breakTimes),
+                                        shiftType: instance.shiftType || 'regular',
+                                        deskFunction: 'calltake'
+                                    });
+                                }
+                            });
+                        });
+                    }
+                    
+                    // Check reliever duties
+                    if (schedule.relieverDuties) {
+                        schedule.relieverDuties.forEach(reliever => {
+                            if (reliever.memberId === memberId) {
+                                const slotCount = reliever.schedule ? Object.keys(reliever.schedule).filter(k => reliever.schedule[k]).length : 0;
+                                dateResult.assignments.push({
+                                    type: 'Reliever',
+                                    position: 'Reliever Duty',
+                                    hours: reliever.hours ? `${reliever.hours.start} - ${reliever.hours.end}` : 'N/A',
+                                    breaks: formatBreaks(reliever.breakTimes),
+                                    shiftType: 'regular',
+                                    deskFunction: 'reliever',
+                                    extra: `${slotCount} desk assignments`
+                                });
+                            }
+                        });
+                    }
+                    
+                    // Check SOS/OS entries
+                    if (schedule.sosOsEntries) {
+                        ['sos', 'os'].forEach(type => {
+                            if (schedule.sosOsEntries[type]) {
+                                schedule.sosOsEntries[type].forEach(entry => {
+                                    if (entry.memberId === memberId) {
+                                        dateResult.assignments.push({
+                                            type: type.toUpperCase(),
+                                            position: type === 'sos' ? 'Shift Operations Supervisor' : 'Operations Supervisor',
+                                            hours: entry.positionHours || 'N/A',
+                                            breaks: 'N/A',
+                                            shiftType: 'regular',
+                                            deskFunction: type,
+                                            extra: entry.duties || ''
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                results.push(dateResult);
+            });
+            
+            return results;
+        }
+
+        function formatBreaks(breaks) {
+            if (!breaks) return 'N/A';
+            const parts = [];
+            if (breaks.break1) parts.push(`B1: ${breaks.break1}`);
+            if (breaks.lunch && breaks.tibOption === 'na') parts.push(`L: ${breaks.lunch}`);
+            if (breaks.tibOption && breaks.tibOption !== 'na') parts.push(breaks.tibOption.toUpperCase());
+            if (breaks.break2) parts.push(`B2: ${breaks.break2}`);
+            return parts.length > 0 ? parts.join(', ') : 'None';
+        }
+
+        function displayFindResults(results, member) {
+            const container = document.getElementById('findResults');
+            const noResults = document.getElementById('findNoResults');
+            
+            container.innerHTML = '';
+            
+            const hasAnyAssignments = results.some(r => r.assignments.length > 0);
+            
+            if (!hasAnyAssignments) {
+                noResults.style.display = 'block';
+                noResults.textContent = `No scheduled assignments found for ${member.name} in the selected date(s).`;
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            
+            results.forEach(result => {
+                const card = document.createElement('div');
+                card.className = 'find-result-card';
+                
+                const dateObj = new Date(result.date + 'T12:00:00');
+                const dateStr = dateObj.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                
+                let cardHTML = `<div class="find-result-date">${dateStr}</div>`;
+                cardHTML += '<div class="find-result-assignments">';
+                
+                if (result.assignments.length === 0) {
+                    cardHTML += '<div class="find-result-empty">No assignments scheduled</div>';
+                } else {
+                    result.assignments.forEach(assignment => {
+                        const typeClass = assignment.shiftType === 'callback' ? 'type-callback' : 
+                                         assignment.shiftType === 'overtime' ? 'type-overtime' : 'type-regular';
+                        const typeLabel = assignment.shiftType === 'callback' ? 'CB' : 
+                                         assignment.shiftType === 'overtime' ? 'OT' : 'Reg';
+                        
+                        cardHTML += `
+                            <div class="find-result-row">
+                                <span class="find-result-label">${assignment.type}</span>
+                                <span class="find-result-value">${assignment.position}</span>
+                                <span class="find-result-detail">Hours: ${assignment.hours}</span>
+                                <span class="find-result-detail">Breaks: ${assignment.breaks}</span>
+                                <span class="shift-type-select ${typeClass}" style="pointer-events: none;">${typeLabel}</span>
+                                ${assignment.extra ? `<span class="find-result-detail">${assignment.extra}</span>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+                
+                cardHTML += '</div>';
+                card.innerHTML = cardHTML;
+                container.appendChild(card);
+            });
+        }
+
         // SOS/OS Functions
         function renderSosOsSection() {
             renderSosOsMemberCards();
@@ -4978,6 +5557,7 @@
                                 onchange="updateShiftType('${deskNum}', this.value, 'dispatch')">
                             <option value="regular" ${(state.shiftTypes[deskNum] || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
                             <option value="callback" ${state.shiftTypes[deskNum] === 'callback' ? 'selected' : ''}>CB</option>
+                            <option value="overtime" ${state.shiftTypes[deskNum] === 'overtime' ? 'selected' : ''}>OT</option>
                         </select>
                     </td>
                     <td>
@@ -5091,6 +5671,7 @@
                             onchange="updateInstanceShiftType('${instance.id}', this.value, '${deskType}')">
                         <option value="regular" ${(instance.shiftType || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
                         <option value="callback" ${instance.shiftType === 'callback' ? 'selected' : ''}>CB</option>
+                        <option value="overtime" ${instance.shiftType === 'overtime' ? 'selected' : ''}>OT</option>
                     </select>
                 </td>
             `;
@@ -5425,6 +6006,7 @@
                                 onchange="updateShiftType('${deskNum}', this.value, 'calltake')">
                             <option value="regular" ${(state.callTakeShiftTypes[deskNum] || 'regular') === 'regular' ? 'selected' : ''}>Reg</option>
                             <option value="callback" ${state.callTakeShiftTypes[deskNum] === 'callback' ? 'selected' : ''}>CB</option>
+                            <option value="overtime" ${state.callTakeShiftTypes[deskNum] === 'overtime' ? 'selected' : ''}>OT</option>
                         </select>
                     </td>
                     <td>
@@ -5720,6 +6302,7 @@
         function getShiftTypeClass(shiftType) {
             switch(shiftType) {
                 case 'callback': return 'type-callback';
+                case 'overtime': return 'type-overtime';
                 default: return 'type-regular';
             }
         }
@@ -6720,6 +7303,9 @@
                 document.getElementById('sectionSosOs').classList.add('active');
                 document.getElementById('navSosOs').classList.add('active');
                 renderSosOsSection();
+            } else if (section === 'find') {
+                document.getElementById('sectionFind').classList.add('active');
+                document.getElementById('navFind').classList.add('active');
             }
         }
 
