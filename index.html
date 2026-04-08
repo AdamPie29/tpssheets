@@ -3080,14 +3080,43 @@
                 Member assignments will not be saved in the template.
             </p>
             
-            <div style="margin-bottom: 1rem;">
-                <label class="form-label">Template Name *</label>
-                <input type="text" id="templateName" class="form-input" placeholder="e.g., A Platoon - Day Shift" style="width: 100%;">
+            <!-- Save Mode Toggle -->
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <label class="template-option-checkbox">
+                    <input type="radio" name="saveMode" id="saveModeNew" checked onchange="toggleSaveMode()">
+                    <span>Create New Template</span>
+                </label>
+                <label class="template-option-checkbox">
+                    <input type="radio" name="saveMode" id="saveModeOverwrite" onchange="toggleSaveMode()">
+                    <span>Overwrite Existing</span>
+                </label>
             </div>
             
-            <div style="margin-bottom: 1rem;">
-                <label class="form-label">Description (optional)</label>
-                <textarea id="templateDescription" class="form-input" placeholder="Add notes about when to use this template..." style="width: 100%; min-height: 80px; resize: vertical;"></textarea>
+            <!-- New Template Fields -->
+            <div id="newTemplateFields">
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" id="templateName" class="form-input" placeholder="e.g., A Platoon - Day Shift" style="width: 100%;">
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label">Description (optional)</label>
+                    <textarea id="templateDescription" class="form-input" placeholder="Add notes about when to use this template..." style="width: 100%; min-height: 80px; resize: vertical;"></textarea>
+                </div>
+            </div>
+            
+            <!-- Overwrite Template Fields -->
+            <div id="overwriteTemplateFields" style="display: none;">
+                <div style="margin-bottom: 1rem;">
+                    <label class="form-label">Select Template to Overwrite *</label>
+                    <select id="overwriteTemplateSelect" class="form-select" style="width: 100%;" onchange="onOverwriteTemplateSelect()">
+                        <option value="">-- Select a template --</option>
+                    </select>
+                </div>
+                <div id="overwriteTemplateInfo" style="display: none; padding: 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1rem;">
+                    <div style="font-weight: 600; color: var(--text-primary);" id="overwriteTemplateName"></div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;" id="overwriteTemplateDesc"></div>
+                </div>
             </div>
             
             <div class="template-apply-options">
@@ -3107,7 +3136,7 @@
             
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeSaveTemplateModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveCurrentAsTemplate()">Save Template</button>
+                <button class="btn btn-primary" id="saveTemplateBtn" onclick="saveCurrentAsTemplate()">Save Template</button>
             </div>
         </div>
     </div>
@@ -5129,16 +5158,68 @@
         }
 
         function openSaveTemplateModal() {
+            // Reset to new template mode
+            document.getElementById('saveModeNew').checked = true;
+            document.getElementById('saveModeOverwrite').checked = false;
             document.getElementById('templateName').value = '';
             document.getElementById('templateDescription').value = '';
             document.getElementById('saveDispatchTemplate').checked = true;
             document.getElementById('saveCallTakeTemplate').checked = true;
             document.getElementById('saveRelieversTemplate').checked = true;
+            document.getElementById('saveTemplateBtn').textContent = 'Save Template';
+            
+            // Populate overwrite dropdown
+            populateOverwriteDropdown();
+            
+            // Show/hide appropriate fields
+            toggleSaveMode();
+            
             document.getElementById('saveTemplateModal').classList.add('active');
         }
 
         function closeSaveTemplateModal() {
             document.getElementById('saveTemplateModal').classList.remove('active');
+        }
+        
+        function toggleSaveMode() {
+            const isOverwrite = document.getElementById('saveModeOverwrite').checked;
+            document.getElementById('newTemplateFields').style.display = isOverwrite ? 'none' : 'block';
+            document.getElementById('overwriteTemplateFields').style.display = isOverwrite ? 'block' : 'none';
+            document.getElementById('saveTemplateBtn').textContent = isOverwrite ? 'Overwrite Template' : 'Save Template';
+            
+            if (isOverwrite) {
+                document.getElementById('overwriteTemplateSelect').value = '';
+                document.getElementById('overwriteTemplateInfo').style.display = 'none';
+            }
+        }
+        
+        function populateOverwriteDropdown() {
+            const select = document.getElementById('overwriteTemplateSelect');
+            select.innerHTML = '<option value="">-- Select a template --</option>';
+            
+            scheduleTemplates.forEach(template => {
+                const option = document.createElement('option');
+                option.value = template.id;
+                option.textContent = template.name;
+                select.appendChild(option);
+            });
+        }
+        
+        function onOverwriteTemplateSelect() {
+            const templateId = document.getElementById('overwriteTemplateSelect').value;
+            const infoDiv = document.getElementById('overwriteTemplateInfo');
+            
+            if (!templateId) {
+                infoDiv.style.display = 'none';
+                return;
+            }
+            
+            const template = scheduleTemplates.find(t => String(t.id) === String(templateId));
+            if (template) {
+                document.getElementById('overwriteTemplateName').textContent = template.name;
+                document.getElementById('overwriteTemplateDesc').textContent = template.description || 'No description';
+                infoDiv.style.display = 'block';
+            }
         }
 
         function openEditTemplateModal(templateId) {
@@ -5288,28 +5369,53 @@
         }
 
         async function saveCurrentAsTemplate() {
-            const name = document.getElementById('templateName').value.trim();
-            const description = document.getElementById('templateDescription').value.trim();
+            const isOverwrite = document.getElementById('saveModeOverwrite').checked;
             const includeDispatch = document.getElementById('saveDispatchTemplate').checked;
             const includeCallTake = document.getElementById('saveCallTakeTemplate').checked;
             const includeRelievers = document.getElementById('saveRelieversTemplate').checked;
-            
-            if (!name) {
-                alert('Please enter a template name.');
-                return;
-            }
             
             if (!includeDispatch && !includeCallTake && !includeRelievers) {
                 alert('Please select at least one option to include.');
                 return;
             }
             
+            let templateId, templateName, templateDescription;
+            
+            if (isOverwrite) {
+                // Overwrite existing template
+                templateId = document.getElementById('overwriteTemplateSelect').value;
+                if (!templateId) {
+                    alert('Please select a template to overwrite.');
+                    return;
+                }
+                
+                const existingTemplate = scheduleTemplates.find(t => String(t.id) === String(templateId));
+                if (!existingTemplate) {
+                    alert('Selected template not found.');
+                    return;
+                }
+                
+                templateName = existingTemplate.name;
+                templateDescription = existingTemplate.description;
+                
+                if (!confirm(`Are you sure you want to overwrite "${templateName}"?\n\nThis will replace all desk configurations in this template with the current schedule.`)) {
+                    return;
+                }
+            } else {
+                // Create new template
+                templateName = document.getElementById('templateName').value.trim();
+                templateDescription = document.getElementById('templateDescription').value.trim();
+                
+                if (!templateName) {
+                    alert('Please enter a template name.');
+                    return;
+                }
+                
+                templateId = 'template_' + Date.now();
+            }
+            
             // Build template data from current state
-            const template = {
-                id: 'template_' + Date.now(),
-                name: name,
-                description: description,
-                created_at: new Date().toISOString(),
+            const templateData = {
                 dispatch_desks: {},
                 dispatch_instances: {},
                 calltake_desks: {},
@@ -5321,7 +5427,7 @@
             if (includeDispatch) {
                 for (let i = 1; i <= 24; i++) {
                     const deskNum = String(i).padStart(2, '0');
-                    template.dispatch_desks[deskNum] = {
+                    templateData.dispatch_desks[deskNum] = {
                         hours: state.deskHours[deskNum] ? { ...state.deskHours[deskNum] } : { start: '06:30', end: '15:00' },
                         breaks: state.breakTimes[deskNum] ? { ...state.breakTimes[deskNum] } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' }
                     };
@@ -5330,7 +5436,7 @@
                 // Capture dispatch desk instances
                 Object.keys(state.deskInstances).forEach(baseDeskNum => {
                     if (state.deskInstances[baseDeskNum] && state.deskInstances[baseDeskNum].length > 0) {
-                        template.dispatch_instances[baseDeskNum] = state.deskInstances[baseDeskNum].map(instance => ({
+                        templateData.dispatch_instances[baseDeskNum] = state.deskInstances[baseDeskNum].map(instance => ({
                             instanceNum: instance.instanceNum,
                             hours: instance.hours ? { ...instance.hours } : { start: '06:30', end: '15:00' },
                             breakTimes: instance.breakTimes ? { ...instance.breakTimes } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
@@ -5345,7 +5451,7 @@
             if (includeCallTake) {
                 callTakeLabels.forEach((label, index) => {
                     const deskNum = `CT${String(index + 1).padStart(2, '0')}`;
-                    template.calltake_desks[deskNum] = {
+                    templateData.calltake_desks[deskNum] = {
                         hours: state.callTakeDeskHours[deskNum] ? { ...state.callTakeDeskHours[deskNum] } : { start: '06:30', end: '15:00' },
                         breaks: state.callTakeBreakTimes[deskNum] ? { ...state.callTakeBreakTimes[deskNum] } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' }
                     };
@@ -5354,7 +5460,7 @@
                 // Capture call take desk instances
                 Object.keys(state.callTakeDeskInstances).forEach(baseDeskNum => {
                     if (state.callTakeDeskInstances[baseDeskNum] && state.callTakeDeskInstances[baseDeskNum].length > 0) {
-                        template.calltake_instances[baseDeskNum] = state.callTakeDeskInstances[baseDeskNum].map(instance => ({
+                        templateData.calltake_instances[baseDeskNum] = state.callTakeDeskInstances[baseDeskNum].map(instance => ({
                             instanceNum: instance.instanceNum,
                             hours: instance.hours ? { ...instance.hours } : { start: '06:30', end: '15:00' },
                             breakTimes: instance.breakTimes ? { ...instance.breakTimes } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
@@ -5366,7 +5472,7 @@
             
             // Capture reliever configurations (hours and schedule slots, not member assignments)
             if (includeRelievers && state.relieverDuties.length > 0) {
-                template.relievers = state.relieverDuties.map((reliever, index) => ({
+                templateData.relievers = state.relieverDuties.map((reliever, index) => ({
                     relieverNum: index + 1,
                     hours: reliever.hours ? { ...reliever.hours } : { start: '06:30', end: '15:00' },
                     breakTimes: reliever.breakTimes ? { ...reliever.breakTimes } : { break1: '', lunch: '', tibOption: 'na', plus15Enabled: false, break2: '' },
@@ -5374,13 +5480,27 @@
                 }));
             }
             
-            await saveTemplateToDB(template);
+            if (isOverwrite) {
+                // Update existing template
+                await overwriteTemplateInDB(templateId, templateData);
+            } else {
+                // Create new template
+                const template = {
+                    id: templateId,
+                    name: templateName,
+                    description: templateDescription,
+                    created_at: new Date().toISOString(),
+                    ...templateData
+                };
+                await saveTemplateToDB(template);
+            }
+            
             closeSaveTemplateModal();
             
             // Count instances and relievers for message
-            const dispatchInstanceCount = Object.values(template.dispatch_instances).reduce((sum, arr) => sum + arr.length, 0);
-            const callTakeInstanceCount = Object.values(template.calltake_instances).reduce((sum, arr) => sum + arr.length, 0);
-            const relieverCount = template.relievers.length;
+            const dispatchInstanceCount = Object.values(templateData.dispatch_instances).reduce((sum, arr) => sum + arr.length, 0);
+            const callTakeInstanceCount = Object.values(templateData.calltake_instances).reduce((sum, arr) => sum + arr.length, 0);
+            const relieverCount = templateData.relievers.length;
             
             let detailsMsg = [];
             if (dispatchInstanceCount + callTakeInstanceCount > 0) {
@@ -5392,7 +5512,43 @@
             
             let instanceMsg = detailsMsg.length > 0 ? ` (includes ${detailsMsg.join(', ')})` : '';
             
-            alert(`Template "${name}" saved successfully!${instanceMsg}`);
+            const action = isOverwrite ? 'overwritten' : 'saved';
+            alert(`Template "${templateName}" ${action} successfully!${instanceMsg}`);
+        }
+        
+        async function overwriteTemplateInDB(templateId, templateData) {
+            // Update local array
+            const idx = scheduleTemplates.findIndex(t => String(t.id) === String(templateId));
+            if (idx !== -1) {
+                scheduleTemplates[idx] = { 
+                    ...scheduleTemplates[idx], 
+                    ...templateData,
+                    updated_at: new Date().toISOString()
+                };
+                localStorage.setItem('scheduleTemplates', JSON.stringify(scheduleTemplates));
+            }
+            
+            if (!supabaseClient) {
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('schedule_templates')
+                    .update({
+                        ...templateData,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', templateId);
+                
+                if (error) {
+                    console.error('Error overwriting template in Supabase:', error);
+                } else {
+                    console.log('Template overwritten in Supabase:', templateId);
+                }
+            } catch (err) {
+                console.error('Error overwriting template:', err);
+            }
         }
 
         async function updateTemplate() {
