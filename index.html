@@ -3753,8 +3753,12 @@
                 <button class="modal-close" onclick="closeEditMemberModal()">&times;</button>
             </div>
             <div id="editMemberForm">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label">Member Name (Last, First)</label>
+                    <input type="text" id="editMemberNameInput" class="form-input" placeholder="Doe, John" required>
+                </div>
+                
                 <div style="margin-bottom: 1.5rem;">
-                    <div class="member-name" style="font-size: 1.3rem; margin-bottom: 0.5rem;" id="editMemberName"></div>
                     <div class="member-role" style="font-size: 0.95rem;" id="editMemberPlatoon"></div>
                 </div>
                 
@@ -3762,7 +3766,7 @@
                 <div class="tag-selector" id="editTagSelector"></div>
                 
                 <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
-                    <button class="btn btn-primary" style="flex: 1;" onclick="saveMemberTags()">Save Changes</button>
+                    <button class="btn btn-primary" style="flex: 1;" onclick="saveMemberChanges()">Save Changes</button>
                     <button class="btn btn-secondary" style="flex: 1;" onclick="closeEditMemberModal()">Cancel</button>
                 </div>
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
@@ -9412,7 +9416,7 @@
             if (!member) return;
             
             // Populate modal with member info
-            document.getElementById('editMemberName').textContent = formatName(member.name);
+            document.getElementById('editMemberNameInput').value = formatName(member.name);
             document.getElementById('editMemberPlatoon').textContent = `Platoon ${member.platoon} • Badge: ${member.badge}`;
             
             // Create tag checkboxes
@@ -9444,17 +9448,25 @@
             // Optional: Add live preview of selected tags if desired
         }
 
-        async function saveMemberTags() {
+        async function saveMemberChanges() {
             if (!editingMemberId) return;
             
             const member = masterPersonnel.find(m => m.id === editingMemberId);
             if (!member) return;
             
+            // Get updated name
+            const newName = document.getElementById('editMemberNameInput').value.trim();
+            if (!newName) {
+                alert('Please enter a member name.');
+                return;
+            }
+            
             // Get selected tags
             const checkboxes = document.querySelectorAll('#editTagSelector .tag-checkbox:checked');
             const selectedTags = Array.from(checkboxes).map(cb => cb.value);
             
-            // Update member's tags
+            // Update member's name and tags
+            member.name = newName;
             member.tags = selectedTags;
             
             // Save to database
@@ -9467,7 +9479,7 @@
             closeEditMemberModal();
             
             // Show confirmation
-            console.log(`Updated tags for ${formatName(member.name)}:`, selectedTags);
+            console.log(`Updated ${formatName(member.name)}:`, selectedTags);
         }
 
         async function deleteMember() {
