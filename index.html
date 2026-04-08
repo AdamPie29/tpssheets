@@ -2182,6 +2182,33 @@
             opacity: 0.5;
         }
 
+        /* Position Hours Highlighting */
+        .reliever-time-header.position-highlight {
+            background: rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+            font-weight: 700;
+        }
+
+        .reliever-desk-input.position-highlight {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.5);
+        }
+
+        .reliever-desk-input.position-highlight:focus {
+            outline-color: #f59e0b;
+        }
+
+        .reliever-time-header.position-filled {
+            background: rgba(46, 160, 67, 0.3);
+            color: #2ea043;
+            font-weight: 700;
+        }
+
+        .reliever-desk-input.position-filled {
+            background: rgba(46, 160, 67, 0.15);
+            border-color: rgba(46, 160, 67, 0.5);
+        }
+
         .remove-reliever-btn {
             background: var(--danger);
             color: white;
@@ -9925,6 +9952,7 @@
                 id: relieverIdCounter++,
                 memberId: null,
                 notes: '',
+                positionHours: { start: '', end: '' },
                 schedule: {
                     '0630': '', '0645': '', '0700': '', '0715': '', '0730': '', '0745': '',
                     '0800': '', '0815': '', '0830': '', '0845': '', '0900': '', '0915': '',
@@ -10162,6 +10190,11 @@
                 const assignedMember = reliever.memberId ? masterPersonnel.find(m => m.id === reliever.memberId) : null;
                 const assignedMemberName = assignedMember ? assignedMember.name : '';
                 
+                // Get position hours for highlighting
+                const positionHours = reliever.positionHours || { start: '', end: '' };
+                const startTime = positionHours.start ? positionHours.start.replace(':', '') : '';
+                const endTime = positionHours.end ? positionHours.end.replace(':', '') : '';
+                
                 return `
                     <div class="reliever-duty-card">
                         <div class="reliever-duty-header">
@@ -10186,30 +10219,49 @@
                         
                         <div style="display: grid; grid-template-columns: 200px 1fr; gap: 1.5rem;">
                             <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">Position Hours:</label>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+                                    <input type="time" 
+                                           class="form-input" 
+                                           value="${positionHours.start || ''}"
+                                           onchange="updateRelieverPositionHours(${reliever.id}, 'start', this.value)"
+                                           style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                                    <span style="color: var(--text-secondary);">to</span>
+                                    <input type="time" 
+                                           class="form-input" 
+                                           value="${positionHours.end || ''}"
+                                           onchange="updateRelieverPositionHours(${reliever.id}, 'end', this.value)"
+                                           style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                                </div>
+                                
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">Notes:</label>
                                 <textarea 
                                     class="reliever-notes-input"
                                     placeholder="Add notes about this reliever duty..."
                                     onchange="updateRelieverNotes(${reliever.id}, this.value)"
-                                    style="width: 100%; height: 300px; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 6px; padding: 0.75rem; color: var(--text-primary); font-family: 'Barlow Semi Condensed', sans-serif; font-size: 0.9rem; resize: vertical;"
+                                    style="width: 100%; height: 240px; background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 6px; padding: 0.75rem; color: var(--text-primary); font-family: 'Barlow Semi Condensed', sans-serif; font-size: 0.9rem; resize: vertical;"
                                 >${reliever.notes || ''}</textarea>
                             </div>
                             
                             <div>
                                 ${timeSlots.map(row => `
                                     <div class="reliever-schedule-grid">
-                                        ${row.map(time => `
+                                        ${row.map(time => {
+                                            const isInRange = isTimeInPositionRange(time, startTime, endTime);
+                                            const hasValue = reliever.schedule[time] && reliever.schedule[time].trim() !== '';
+                                            const highlightClass = isInRange ? (hasValue ? 'position-filled' : 'position-highlight') : '';
+                                            return `
                                             <div>
-                                                <div class="reliever-time-header">${time.substring(0, 2)}:${time.substring(2)}</div>
+                                                <div class="reliever-time-header ${highlightClass}">${time.substring(0, 2)}:${time.substring(2)}</div>
                                                 <input 
                                                     type="text" 
-                                                    class="reliever-desk-input" 
+                                                    class="reliever-desk-input ${highlightClass}" 
                                                     value="${reliever.schedule[time]}"
                                                     placeholder=""
                                                     onchange="updateRelieverSchedule(${reliever.id}, '${time}', this.value)"
                                                 />
                                             </div>
-                                        `).join('')}
+                                        `}).join('')}
                                     </div>
                                 `).join('')}
                             </div>
@@ -10220,6 +10272,37 @@
                     </div>
                 `;
             }).join('');
+        }
+        
+        // Helper function to check if a time slot is within position hours range
+        function isTimeInPositionRange(slotTime, startTime, endTime) {
+            if (!startTime || !endTime) return false;
+            
+            // Convert times to comparable numbers (handle overnight shifts)
+            const slotNum = parseInt(slotTime);
+            const startNum = parseInt(startTime);
+            const endNum = parseInt(endTime);
+            
+            // Handle overnight shift (e.g., 22:00 to 06:00)
+            if (endNum < startNum) {
+                // Overnight: slot is in range if it's >= start OR < end
+                return slotNum >= startNum || slotNum < endNum;
+            } else {
+                // Normal: slot is in range if it's >= start AND < end
+                return slotNum >= startNum && slotNum < endNum;
+            }
+        }
+        
+        // Update reliever position hours
+        function updateRelieverPositionHours(relieverId, field, value) {
+            const reliever = state.relieverDuties.find(r => r.id === relieverId);
+            if (reliever) {
+                if (!reliever.positionHours) {
+                    reliever.positionHours = { start: '', end: '' };
+                }
+                reliever.positionHours[field] = value;
+                renderRelieverDuties();
+            }
         }
 
         async function saveRelieverDetails(relieverId) {
