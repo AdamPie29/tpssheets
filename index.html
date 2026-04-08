@@ -334,6 +334,265 @@
             }
         }
 
+        /* User Management Styles */
+        .user-management-page {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .user-management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .user-management-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .user-management-title span {
+            color: #8b5cf6;
+        }
+
+        .user-stats {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .user-stat {
+            text-align: center;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .user-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .user-stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .user-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-table th {
+            background: var(--bg-dark);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-table tr:hover {
+            background: var(--primary-light);
+        }
+
+        .user-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .user-badge {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .user-platoon {
+            color: var(--text-secondary);
+        }
+
+        .user-role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .user-role-badge.admin {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+        }
+
+        .user-role-badge.readonly {
+            background: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+        }
+
+        .user-role-select {
+            padding: 0.35rem 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .user-role-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .user-action-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-action-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .user-action-btn.delete:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .user-action-btn.reset:hover {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .user-search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .user-search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .user-search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .user-filter-select {
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .no-users-message {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .add-user-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .add-user-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .add-user-form {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .add-user-field {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .add-user-field label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+
+        .add-user-field input,
+        .add-user-field select {
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .add-user-field input:focus,
+        .add-user-field select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .user-created-date {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         .login-toggle a {
             color: var(--accent);
             cursor: pointer;
@@ -2800,6 +3059,7 @@
                     <button class="btn btn-secondary" onclick="navigateToOpenSeating()">Open Seating</button>
                     <button class="btn btn-secondary" onclick="navigateToShiftSchedule()">Shift Schedule</button>
                     <button class="btn btn-secondary" onclick="navigateToMasterPersonnel()">Master Personnel</button>
+                    <button class="btn btn-secondary" onclick="navigateToUserManagement()" style="background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #8b5cf6;">👤 Users</button>
                     <div class="user-info">
                         <span class="user-email" id="userEmail"></span>
                         <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
@@ -3121,6 +3381,90 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management Page -->
+        <div id="userManagementPage" class="page">
+            <div class="user-management-page">
+                <div class="user-management-header">
+                    <div>
+                        <h1 class="user-management-title">👤 User <span>Management</span></h1>
+                        <p style="color: var(--text-secondary); margin-top: 0.5rem;">Manage user accounts and access roles</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div class="user-stats">
+                            <div class="user-stat">
+                                <div class="user-stat-value" id="totalUsersCount">0</div>
+                                <div class="user-stat-label">Total Users</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value" id="adminUsersCount">0</div>
+                                <div class="user-stat-label">Admins</div>
+                            </div>
+                            <div class="user-stat">
+                                <div class="user-stat-value" id="readonlyUsersCount">0</div>
+                                <div class="user-stat-label">Read Only</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="navigateToScheduling()">Back to Scheduling</button>
+                    </div>
+                </div>
+                
+                <!-- Add New User Section -->
+                <div class="add-user-section">
+                    <div class="add-user-title">➕ Add New User</div>
+                    <div class="add-user-form">
+                        <div class="add-user-field">
+                            <label>Badge Number</label>
+                            <input type="text" id="newUserBadge" placeholder="Enter badge #" pattern="[0-9]*" inputmode="numeric">
+                        </div>
+                        <div class="add-user-field">
+                            <label>PIN (min 6 digits)</label>
+                            <input type="password" id="newUserPin" placeholder="Create PIN" minlength="6" inputmode="numeric">
+                        </div>
+                        <div class="add-user-field">
+                            <label>Role</label>
+                            <select id="newUserRole">
+                                <option value="readonly">Read Only</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="createNewUserFromAdmin()">Create User</button>
+                    </div>
+                    <div id="addUserMessage" style="margin-top: 1rem; display: none;"></div>
+                </div>
+
+                <!-- Search and Filter -->
+                <div class="user-search-bar" style="margin-top: 1.5rem;">
+                    <input type="text" class="user-search-input" id="userSearchInput" placeholder="Search by name or badge..." oninput="filterUserList()">
+                    <select class="user-filter-select" id="userRoleFilter" onchange="filterUserList()">
+                        <option value="all">All Roles</option>
+                        <option value="admin">Admins Only</option>
+                        <option value="readonly">Read Only</option>
+                    </select>
+                </div>
+
+                <!-- Users Table -->
+                <div class="user-table-container">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Badge</th>
+                                <th>Platoon</th>
+                                <th>Role</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <tr>
+                                <td colspan="6" class="no-users-message">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -3528,18 +3872,25 @@
         
         async function checkUserRoleAndShow() {
             try {
+                console.log('Checking role for user:', currentUser.id);
+                
                 // Get user role from user_roles table
                 const { data: roleData, error: roleError } = await supabaseClient
                     .from('user_roles')
                     .select('*')
                     .eq('user_id', currentUser.id)
-                    .single();
+                    .maybeSingle();
                 
-                if (roleError || !roleData) {
+                console.log('Role query result:', { roleData, roleError });
+                
+                if (roleError) {
                     console.error('Error fetching user role:', roleError);
-                    // Default to readonly if no role found
+                    currentUserRole = 'readonly';
+                } else if (!roleData) {
+                    console.log('No role record found for user');
                     currentUserRole = 'readonly';
                 } else {
+                    console.log('Found role:', roleData.role);
                     currentUserRole = roleData.role;
                     
                     // Load personnel data first to find the member
@@ -3548,6 +3899,8 @@
                     // Find the member by badge number
                     currentUserMember = masterPersonnel.find(m => m.badge === roleData.badge_number);
                 }
+                
+                console.log('Final role decision:', currentUserRole);
                 
                 if (currentUserRole === 'admin') {
                     showMainApp();
@@ -6801,9 +7154,25 @@
             shiftSelect.style.background = '';
         }
 
+        function navigateToUserManagement() {
+            // Hide all scheduling pages
+            document.querySelectorAll('#page1, #page2, #page3, #shiftSchedulePage, #openSeatingPage, #agentMapPage, #masterPersonnelPage').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show user management page
+            document.getElementById('userManagementPage').classList.add('active');
+            
+            // Load users
+            loadUserManagement();
+            
+            // Update URL
+            window.history.pushState({}, '', '?page=users');
+        }
+
         function navigateToMasterPersonnel() {
             // Hide all scheduling pages
-            document.querySelectorAll('#page1, #page2, #page3, #shiftSchedulePage, #openSeatingPage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#page1, #page2, #page3, #shiftSchedulePage, #openSeatingPage, #agentMapPage, #userManagementPage').forEach(page => {
                 page.classList.remove('active');
             });
             
@@ -6819,7 +7188,7 @@
 
         function navigateToShiftSchedule() {
             // Hide all other pages
-            document.querySelectorAll('#page3, #masterPersonnelPage, #openSeatingPage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #openSeatingPage, #agentMapPage, #userManagementPage').forEach(page => {
                 page.classList.remove('active');
             });
             
@@ -6835,7 +7204,7 @@
 
         async function navigateToOpenSeating() {
             // Hide all other pages
-            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #agentMapPage, #userManagementPage').forEach(page => {
                 page.classList.remove('active');
             });
             
@@ -6863,7 +7232,7 @@
 
         async function navigateToAgentMap() {
             // Hide all other pages
-            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #openSeatingPage').forEach(page => {
+            document.querySelectorAll('#page3, #masterPersonnelPage, #shiftSchedulePage, #openSeatingPage, #userManagementPage').forEach(page => {
                 page.classList.remove('active');
             });
             
@@ -6891,7 +7260,7 @@
 
         function navigateToScheduling() {
             // Hide all other pages
-            document.querySelectorAll('#masterPersonnelPage, #shiftSchedulePage, #openSeatingPage, #agentMapPage').forEach(page => {
+            document.querySelectorAll('#masterPersonnelPage, #shiftSchedulePage, #openSeatingPage, #agentMapPage, #userManagementPage').forEach(page => {
                 page.classList.remove('active');
             });
             
@@ -6900,6 +7269,303 @@
             
             // Update URL
             window.history.pushState({}, '', '?');
+        }
+
+        // User Management Functions
+        let allUserRoles = [];
+
+        async function loadUserManagement() {
+            try {
+                // Load all user roles from database
+                const { data: roles, error } = await supabaseClient
+                    .from('user_roles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error('Error loading user roles:', error);
+                    allUserRoles = [];
+                } else {
+                    allUserRoles = roles || [];
+                }
+                
+                // Update stats
+                updateUserStats();
+                
+                // Render user table
+                renderUserTable();
+                
+            } catch (err) {
+                console.error('Error loading user management:', err);
+            }
+        }
+
+        function updateUserStats() {
+            const total = allUserRoles.length;
+            const admins = allUserRoles.filter(r => r.role === 'admin').length;
+            const readonly = allUserRoles.filter(r => r.role === 'readonly').length;
+            
+            document.getElementById('totalUsersCount').textContent = total;
+            document.getElementById('adminUsersCount').textContent = admins;
+            document.getElementById('readonlyUsersCount').textContent = readonly;
+        }
+
+        function renderUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            const searchTerm = document.getElementById('userSearchInput')?.value.toLowerCase() || '';
+            const roleFilter = document.getElementById('userRoleFilter')?.value || 'all';
+            
+            // Filter users
+            let filteredUsers = allUserRoles.filter(user => {
+                // Find member by badge
+                const member = masterPersonnel.find(m => m.badge === user.badge_number);
+                const name = member?.name || 'Unknown';
+                
+                // Search filter
+                const matchesSearch = !searchTerm || 
+                    name.toLowerCase().includes(searchTerm) || 
+                    user.badge_number.includes(searchTerm);
+                
+                // Role filter
+                const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+                
+                return matchesSearch && matchesRole;
+            });
+            
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="no-users-message">
+                            ${allUserRoles.length === 0 ? 'No users created yet. Add a user above.' : 'No users match your search.'}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredUsers.map(user => {
+                const member = masterPersonnel.find(m => m.badge === user.badge_number);
+                const name = member?.name || 'Unknown';
+                const platoon = member?.platoon || '-';
+                const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : '-';
+                const isCurrentUser = currentUser && user.user_id === currentUser.id;
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="user-name">${name}</div>
+                        </td>
+                        <td>
+                            <span class="user-badge">#${user.badge_number}</span>
+                        </td>
+                        <td>
+                            <span class="user-platoon">${platoon}</span>
+                        </td>
+                        <td>
+                            <select class="user-role-select" onchange="changeUserRole('${user.id}', this.value)" ${isCurrentUser ? 'disabled title="Cannot change your own role"' : ''}>
+                                <option value="readonly" ${user.role === 'readonly' ? 'selected' : ''}>Read Only</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span class="user-created-date">${createdDate}</span>
+                        </td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="user-action-btn reset" onclick="resetUserPin('${user.badge_number}')" title="Reset PIN">🔑 Reset</button>
+                                <button class="user-action-btn delete" onclick="deleteUser('${user.id}', '${name}')" ${isCurrentUser ? 'disabled title="Cannot delete your own account"' : ''}>🗑️ Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterUserList() {
+            renderUserTable();
+        }
+
+        async function changeUserRole(userRoleId, newRole) {
+            try {
+                const { error } = await supabaseClient
+                    .from('user_roles')
+                    .update({ role: newRole })
+                    .eq('id', userRoleId);
+                
+                if (error) {
+                    console.error('Error updating user role:', error);
+                    alert('Failed to update role. Please try again.');
+                    loadUserManagement(); // Reload to reset
+                    return;
+                }
+                
+                // Update local array
+                const userIdx = allUserRoles.findIndex(u => u.id === userRoleId);
+                if (userIdx !== -1) {
+                    allUserRoles[userIdx].role = newRole;
+                }
+                
+                updateUserStats();
+                
+                const user = allUserRoles.find(u => u.id === userRoleId);
+                const member = masterPersonnel.find(m => m.badge === user?.badge_number);
+                console.log(`Role updated: ${member?.name || user?.badge_number} is now ${newRole}`);
+                
+            } catch (err) {
+                console.error('Error changing role:', err);
+                alert('Failed to update role. Please try again.');
+            }
+        }
+
+        async function createNewUserFromAdmin() {
+            const badge = document.getElementById('newUserBadge').value.trim();
+            const pin = document.getElementById('newUserPin').value;
+            const role = document.getElementById('newUserRole').value;
+            const messageDiv = document.getElementById('addUserMessage');
+            
+            // Validation
+            if (!badge) {
+                showAddUserMessage('Please enter a badge number.', 'error');
+                return;
+            }
+            
+            if (!pin || pin.length < 6) {
+                showAddUserMessage('PIN must be at least 6 digits.', 'error');
+                return;
+            }
+            
+            // Check if badge exists in personnel
+            const member = masterPersonnel.find(m => m.badge === badge);
+            if (!member) {
+                showAddUserMessage('Badge number not found in personnel records.', 'error');
+                return;
+            }
+            
+            // Check if user already exists
+            const existingUser = allUserRoles.find(u => u.badge_number === badge);
+            if (existingUser) {
+                showAddUserMessage('A user with this badge number already exists.', 'error');
+                return;
+            }
+            
+            try {
+                // Create auth user
+                const email = `${badge}@tps.local`;
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email,
+                    password: pin
+                });
+                
+                if (error) throw error;
+                
+                // Add user role record
+                const { error: roleError } = await supabaseClient
+                    .from('user_roles')
+                    .insert([{
+                        user_id: data.user.id,
+                        badge_number: badge,
+                        role: role,
+                        member_id: member.id
+                    }]);
+                
+                if (roleError) {
+                    console.error('Error creating user role:', roleError);
+                    showAddUserMessage('User created but role assignment failed.', 'error');
+                    return;
+                }
+                
+                showAddUserMessage(`User created successfully for ${member.name}!`, 'success');
+                
+                // Clear form
+                document.getElementById('newUserBadge').value = '';
+                document.getElementById('newUserPin').value = '';
+                document.getElementById('newUserRole').value = 'readonly';
+                
+                // Reload user list
+                await loadUserManagement();
+                
+            } catch (error) {
+                console.error('Error creating user:', error);
+                showAddUserMessage(error.message || 'Failed to create user.', 'error');
+            }
+        }
+
+        function showAddUserMessage(message, type) {
+            const messageDiv = document.getElementById('addUserMessage');
+            messageDiv.style.display = 'block';
+            messageDiv.style.padding = '0.75rem 1rem';
+            messageDiv.style.borderRadius = '6px';
+            messageDiv.style.fontSize = '0.9rem';
+            
+            if (type === 'success') {
+                messageDiv.style.background = 'rgba(46, 160, 67, 0.2)';
+                messageDiv.style.border = '1px solid #2ea043';
+                messageDiv.style.color = '#2ea043';
+            } else {
+                messageDiv.style.background = 'rgba(239, 68, 68, 0.2)';
+                messageDiv.style.border = '1px solid #ef4444';
+                messageDiv.style.color = '#ef4444';
+            }
+            
+            messageDiv.textContent = message;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        async function resetUserPin(badge) {
+            const member = masterPersonnel.find(m => m.badge === badge);
+            const name = member?.name || `Badge #${badge}`;
+            
+            const newPin = prompt(`Enter new PIN for ${name} (min 6 digits):`);
+            
+            if (!newPin) return;
+            
+            if (newPin.length < 6) {
+                alert('PIN must be at least 6 digits.');
+                return;
+            }
+            
+            // Note: Supabase doesn't allow admins to reset other users' passwords directly via client SDK
+            // This would require a server-side function or Supabase admin API
+            alert(`PIN reset requires server-side implementation.\n\nFor now, you can:\n1. Delete the user\n2. Create them again with a new PIN\n\nOr use Supabase Dashboard → Authentication → Users to reset their password.`);
+        }
+
+        async function deleteUser(userRoleId, userName) {
+            if (!confirm(`Are you sure you want to delete ${userName}?\n\nThis will remove their access to the system.`)) {
+                return;
+            }
+            
+            try {
+                // Get the user role record first
+                const userRole = allUserRoles.find(u => u.id === userRoleId);
+                
+                // Delete from user_roles table
+                const { error } = await supabaseClient
+                    .from('user_roles')
+                    .delete()
+                    .eq('id', userRoleId);
+                
+                if (error) {
+                    console.error('Error deleting user role:', error);
+                    alert('Failed to delete user. Please try again.');
+                    return;
+                }
+                
+                // Note: The auth.users record remains but they won't have a role
+                // To fully delete, use Supabase Dashboard
+                
+                // Reload user list
+                await loadUserManagement();
+                
+                console.log(`User deleted: ${userName}`);
+                
+            } catch (err) {
+                console.error('Error deleting user:', err);
+                alert('Failed to delete user. Please try again.');
+            }
         }
 
         function showMasterPersonnelPage() {
