@@ -138,6 +138,202 @@
             color: var(--text-secondary);
         }
 
+        /* Read-Only Page Styles */
+        .readonly-container {
+            min-height: 100vh;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+        }
+
+        .readonly-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .readonly-header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .readonly-header h1 span {
+            color: var(--accent);
+        }
+
+        .readonly-logout-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .readonly-logout-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        .readonly-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            flex: 1;
+        }
+
+        .readonly-user-info {
+            text-align: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .readonly-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .readonly-badge {
+            font-size: 1.4rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .readonly-platoon {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .readonly-date {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+        }
+
+        .readonly-schedule {
+            text-align: center;
+        }
+
+        .readonly-loading {
+            color: var(--text-secondary);
+            padding: 2rem;
+        }
+
+        .readonly-assignment {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .readonly-assignment-position {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .readonly-assignment-hours {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .readonly-assignment-breaks {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .readonly-assignment-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+
+        .readonly-assignment-type.regular {
+            background: rgba(46, 160, 67, 0.2);
+            color: #2ea043;
+        }
+
+        .readonly-assignment-type.callback {
+            background: rgba(79, 172, 254, 0.2);
+            color: var(--accent);
+        }
+
+        .readonly-assignment-type.overtime {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .readonly-no-schedule {
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .readonly-no-schedule-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .readonly-footer {
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        .readonly-refresh-btn {
+            padding: 0.75rem 2rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-dark);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .readonly-refresh-btn:hover {
+            background: var(--accent-light);
+        }
+
+        @media (max-width: 480px) {
+            .readonly-container {
+                padding: 0.75rem;
+            }
+            
+            .readonly-name {
+                font-size: 1.5rem;
+            }
+            
+            .readonly-badge {
+                font-size: 1.2rem;
+            }
+            
+            .readonly-assignment-hours {
+                font-size: 1.5rem;
+            }
+        }
+
         .login-toggle a {
             color: var(--accent);
             cursor: pointer;
@@ -2514,46 +2710,83 @@
         <div class="login-card">
             <div class="login-title">
                 <h1>Dispatch <span>Scheduler</span></h1>
-                <p>Sign in to access the scheduling system</p>
+                <p>Sign in with your badge number</p>
             </div>
             
             <div id="loginError" class="login-error"></div>
             
             <form id="loginForm" class="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" required placeholder="Enter your email">
+                    <label for="loginBadge">Badge Number</label>
+                    <input type="text" id="loginBadge" required placeholder="Enter your badge number" pattern="[0-9]*" inputmode="numeric">
                 </div>
                 <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                    <label for="loginPassword">PIN</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your PIN" inputmode="numeric">
                 </div>
                 <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
             </form>
             
-            <form id="signupForm" class="login-form" style="display: none;" onsubmit="handleSignup(event)">
-                <div class="form-group">
-                    <label for="signupEmail">Email</label>
-                    <input type="email" id="signupEmail" required placeholder="Enter your email">
+            <div id="adminSignupSection" style="display: none;">
+                <div class="login-toggle">
+                    Admin: <a onclick="toggleAuthMode()">Create new user</a>
                 </div>
-                <div class="form-group">
-                    <label for="signupPassword">Password</label>
-                    <input type="password" id="signupPassword" required placeholder="Create a password (min 6 characters)" minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="signupConfirm">Confirm Password</label>
-                    <input type="password" id="signupConfirm" required placeholder="Confirm your password" minlength="6">
-                </div>
-                <button type="submit" class="login-btn" id="signupBtn">Create Account</button>
-            </form>
-            
-            <div class="login-toggle" id="loginToggle">
-                Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+                
+                <form id="signupForm" class="login-form" style="display: none;" onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label for="signupBadge">Badge Number</label>
+                        <input type="text" id="signupBadge" required placeholder="Enter badge number" pattern="[0-9]*" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">PIN</label>
+                        <input type="password" id="signupPassword" required placeholder="Create a PIN (min 6 digits)" minlength="6" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupConfirm">Confirm PIN</label>
+                        <input type="password" id="signupConfirm" required placeholder="Confirm PIN" minlength="6" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupRole">Role</label>
+                        <select id="signupRole" class="form-select" style="width: 100%; padding: 0.75rem; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+                            <option value="readonly">Read Only</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="login-btn" id="signupBtn">Create User</button>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Main App (hidden until logged in) -->
+    <!-- Read-Only User Page (mobile-friendly) -->
+    <div id="readOnlyPage" style="display: none;">
+        <div class="readonly-container">
+            <div class="readonly-header">
+                <h1>Dispatch <span>Scheduler</span></h1>
+                <button class="readonly-logout-btn" onclick="handleLogout()">Sign Out</button>
+            </div>
+            
+            <div class="readonly-card">
+                <div class="readonly-user-info">
+                    <div class="readonly-name" id="readonlyUserName">Loading...</div>
+                    <div class="readonly-badge" id="readonlyUserBadge"></div>
+                    <div class="readonly-platoon" id="readonlyUserPlatoon"></div>
+                </div>
+                
+                <div class="readonly-date" id="readonlyDate"></div>
+                
+                <div class="readonly-schedule" id="readonlySchedule">
+                    <div class="readonly-loading">Loading your schedule...</div>
+                </div>
+            </div>
+            
+            <div class="readonly-footer">
+                <button class="readonly-refresh-btn" onclick="loadReadOnlySchedule()">↻ Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until logged in as admin) -->
     <div id="mainApp" style="display: none;">
         <header class="app-header">
             <div class="header-content">
@@ -3280,52 +3513,296 @@
         let currentUser = null;
 
         // Authentication Functions
+        let currentUserRole = null;
+        let currentUserMember = null;
+        
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 currentUser = session.user;
-                showMainApp();
+                await checkUserRoleAndShow();
             } else {
                 showLoginPage();
+            }
+        }
+        
+        async function checkUserRoleAndShow() {
+            try {
+                // Get user role from user_roles table
+                const { data: roleData, error: roleError } = await supabaseClient
+                    .from('user_roles')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (roleError || !roleData) {
+                    console.error('Error fetching user role:', roleError);
+                    // Default to readonly if no role found
+                    currentUserRole = 'readonly';
+                } else {
+                    currentUserRole = roleData.role;
+                    
+                    // Load personnel data first to find the member
+                    await loadPersonnelFromDB();
+                    
+                    // Find the member by badge number
+                    currentUserMember = masterPersonnel.find(m => m.badge === roleData.badge_number);
+                }
+                
+                if (currentUserRole === 'admin') {
+                    showMainApp();
+                } else {
+                    showReadOnlyPage();
+                }
+            } catch (err) {
+                console.error('Error checking user role:', err);
+                currentUserRole = 'readonly';
+                showReadOnlyPage();
             }
         }
 
         function showLoginPage() {
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('readOnlyPage').style.display = 'none';
         }
 
         function showMainApp() {
             document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('readOnlyPage').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
-            document.getElementById('userEmail').textContent = currentUser.email;
+            
+            // Extract badge from email (badge@tps.local)
+            const badge = currentUser.email.split('@')[0];
+            document.getElementById('userEmail').textContent = `Badge: ${badge}`;
+            
+            // Show admin signup section
+            document.getElementById('adminSignupSection').style.display = 'block';
             
             // Initialize app data
             initializeApp();
+        }
+        
+        function showReadOnlyPage() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('readOnlyPage').style.display = 'block';
+            
+            // Load and display read-only data
+            loadReadOnlyData();
+        }
+        
+        async function loadReadOnlyData() {
+            // Ensure personnel is loaded
+            if (masterPersonnel.length === 0) {
+                await loadPersonnelFromDB();
+            }
+            
+            // Find current user's member record by badge
+            const badge = currentUser.email.split('@')[0];
+            currentUserMember = masterPersonnel.find(m => m.badge === badge);
+            
+            if (currentUserMember) {
+                document.getElementById('readonlyUserName').textContent = currentUserMember.name;
+                document.getElementById('readonlyUserBadge').textContent = `#${currentUserMember.badge}`;
+                document.getElementById('readonlyUserPlatoon').textContent = `Platoon ${currentUserMember.platoon}`;
+            } else {
+                document.getElementById('readonlyUserName').textContent = 'Unknown User';
+                document.getElementById('readonlyUserBadge').textContent = `#${badge}`;
+                document.getElementById('readonlyUserPlatoon').textContent = '';
+            }
+            
+            // Set today's date
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('readonlyDate').textContent = today.toLocaleDateString('en-US', options);
+            
+            // Load schedule
+            await loadReadOnlySchedule();
+        }
+        
+        async function loadReadOnlySchedule() {
+            const scheduleContainer = document.getElementById('readonlySchedule');
+            scheduleContainer.innerHTML = '<div class="readonly-loading">Loading your schedule...</div>';
+            
+            if (!currentUserMember) {
+                scheduleContainer.innerHTML = `
+                    <div class="readonly-no-schedule">
+                        <div class="readonly-no-schedule-icon">❓</div>
+                        <div>Your badge is not linked to a personnel record.</div>
+                        <div style="margin-top: 0.5rem; font-size: 0.9rem;">Please contact an administrator.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Load all schedules
+            await loadAllSchedulesFromDB();
+            
+            // Get today's date
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Search for assignments using the existing searchMemberAssignments logic
+            const assignments = [];
+            
+            Object.keys(state.openSeatingData).forEach(key => {
+                const schedule = state.openSeatingData[key];
+                if (!schedule || schedule.date !== today) return;
+                
+                // Check dispatch desks
+                if (schedule.dispatchDesks?.assignments) {
+                    Object.keys(schedule.dispatchDesks.assignments).forEach(deskNum => {
+                        if (schedule.dispatchDesks.assignments[deskNum] === currentUserMember.id) {
+                            const hours = schedule.dispatchDesks.deskHours?.[deskNum];
+                            const breaks = schedule.dispatchDesks.breakTimes?.[deskNum];
+                            const shiftType = schedule.shiftTypes?.[deskNum] || 'regular';
+                            const deskFunc = schedule.deskFunctions?.[deskNum] || 'dispatch';
+                            const label = deskLabels[deskNum] || `PD${deskNum}`;
+                            
+                            assignments.push({
+                                type: deskFunc === 'calltake' ? 'Call Take' : 'Dispatch',
+                                position: label,
+                                hours: hours,
+                                breaks: breaks,
+                                shiftType: shiftType
+                            });
+                        }
+                    });
+                }
+                
+                // Check dispatch instances
+                if (schedule.dispatchDesks?.instances) {
+                    Object.keys(schedule.dispatchDesks.instances).forEach(baseDeskNum => {
+                        schedule.dispatchDesks.instances[baseDeskNum].forEach(instance => {
+                            if (instance.memberId === currentUserMember.id) {
+                                const label = deskLabels[baseDeskNum] || `PD${baseDeskNum}`;
+                                assignments.push({
+                                    type: instance.deskFunction === 'calltake' ? 'Call Take' : 'Dispatch',
+                                    position: `${label} (#${instance.instanceNum})`,
+                                    hours: instance.hours,
+                                    breaks: instance.breakTimes,
+                                    shiftType: instance.shiftType || 'regular'
+                                });
+                            }
+                        });
+                    });
+                }
+                
+                // Check call take desks
+                if (schedule.callTakeDesks?.assignments) {
+                    Object.keys(schedule.callTakeDesks.assignments).forEach(deskNum => {
+                        if (schedule.callTakeDesks.assignments[deskNum] === currentUserMember.id) {
+                            const hours = schedule.callTakeDesks.deskHours?.[deskNum];
+                            const breaks = schedule.callTakeDesks.breakTimes?.[deskNum];
+                            const shiftType = schedule.callTakeShiftTypes?.[deskNum] || 'regular';
+                            const ctIndex = parseInt(deskNum.substring(2)) - 1;
+                            
+                            assignments.push({
+                                type: 'Call Take',
+                                position: callTakeLabels[ctIndex] || deskNum,
+                                hours: hours,
+                                breaks: breaks,
+                                shiftType: shiftType
+                            });
+                        }
+                    });
+                }
+                
+                // Check call take instances
+                if (schedule.callTakeDesks?.instances) {
+                    Object.keys(schedule.callTakeDesks.instances).forEach(baseDeskNum => {
+                        schedule.callTakeDesks.instances[baseDeskNum].forEach(instance => {
+                            if (instance.memberId === currentUserMember.id) {
+                                const ctIndex = parseInt(baseDeskNum.substring(2)) - 1;
+                                assignments.push({
+                                    type: 'Call Take',
+                                    position: `${callTakeLabels[ctIndex] || baseDeskNum} (#${instance.instanceNum})`,
+                                    hours: instance.hours,
+                                    breaks: instance.breakTimes,
+                                    shiftType: instance.shiftType || 'regular'
+                                });
+                            }
+                        });
+                    });
+                }
+                
+                // Check reliever duties
+                if (schedule.relieverDuties) {
+                    schedule.relieverDuties.forEach(reliever => {
+                        if (reliever.memberId === currentUserMember.id) {
+                            assignments.push({
+                                type: 'Reliever',
+                                position: 'Reliever Duty',
+                                hours: reliever.hours,
+                                breaks: null,
+                                shiftType: 'regular',
+                                isReliever: true
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Render assignments
+            if (assignments.length === 0) {
+                scheduleContainer.innerHTML = `
+                    <div class="readonly-no-schedule">
+                        <div class="readonly-no-schedule-icon">📅</div>
+                        <div>No assignments scheduled for today.</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            assignments.forEach(assignment => {
+                const hoursStr = assignment.hours ? 
+                    `${assignment.hours.start} - ${assignment.hours.end}` : 'N/A';
+                
+                let breaksStr = '';
+                if (assignment.breaks) {
+                    const breakParts = [];
+                    if (assignment.breaks.break1) breakParts.push(`Break 1: ${assignment.breaks.break1}`);
+                    if (assignment.breaks.lunch) breakParts.push(`Lunch: ${assignment.breaks.lunch}`);
+                    if (assignment.breaks.break2) breakParts.push(`Break 2: ${assignment.breaks.break2}`);
+                    breaksStr = breakParts.join(' · ');
+                }
+                
+                const typeClass = assignment.shiftType === 'callback' ? 'callback' : 
+                                 assignment.shiftType === 'overtime' ? 'overtime' : 'regular';
+                const typeLabel = assignment.shiftType === 'callback' ? 'Callback' : 
+                                 assignment.shiftType === 'overtime' ? 'Overtime' : 'Regular';
+                
+                html += `
+                    <div class="readonly-assignment">
+                        <div class="readonly-assignment-position">${assignment.position}</div>
+                        <div class="readonly-assignment-hours">${hoursStr}</div>
+                        ${breaksStr ? `<div class="readonly-assignment-breaks">${breaksStr}</div>` : ''}
+                        <span class="readonly-assignment-type ${typeClass}">${typeLabel}</span>
+                    </div>
+                `;
+            });
+            
+            scheduleContainer.innerHTML = html;
         }
 
         function toggleAuthMode() {
             const loginForm = document.getElementById('loginForm');
             const signupForm = document.getElementById('signupForm');
-            const loginToggle = document.getElementById('loginToggle');
             const loginError = document.getElementById('loginError');
             
             loginError.classList.remove('show');
             
-            if (loginForm.style.display !== 'none') {
-                loginForm.style.display = 'none';
+            if (signupForm.style.display === 'none') {
                 signupForm.style.display = 'block';
-                loginToggle.innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
             } else {
-                loginForm.style.display = 'block';
                 signupForm.style.display = 'none';
-                loginToggle.innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>';
             }
         }
 
         async function handleLogin(event) {
             event.preventDefault();
-            const email = document.getElementById('loginEmail').value;
+            const badge = document.getElementById('loginBadge').value.trim();
             const password = document.getElementById('loginPassword').value;
             const loginBtn = document.getElementById('loginBtn');
             const loginError = document.getElementById('loginError');
@@ -3333,6 +3810,9 @@
             loginBtn.disabled = true;
             loginBtn.textContent = 'Signing in...';
             loginError.classList.remove('show');
+            
+            // Convert badge to email format
+            const email = `${badge}@tps.local`;
             
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -3343,9 +3823,9 @@
                 if (error) throw error;
                 
                 currentUser = data.user;
-                showMainApp();
+                await checkUserRoleAndShow();
             } catch (error) {
-                loginError.textContent = error.message;
+                loginError.textContent = 'Invalid badge number or PIN';
                 loginError.classList.add('show');
             } finally {
                 loginBtn.disabled = false;
@@ -3355,24 +3835,37 @@
 
         async function handleSignup(event) {
             event.preventDefault();
-            const email = document.getElementById('signupEmail').value;
+            const badge = document.getElementById('signupBadge').value.trim();
             const password = document.getElementById('signupPassword').value;
             const confirm = document.getElementById('signupConfirm').value;
+            const role = document.getElementById('signupRole').value;
             const signupBtn = document.getElementById('signupBtn');
             const loginError = document.getElementById('loginError');
             
             loginError.classList.remove('show');
             
             if (password !== confirm) {
-                loginError.textContent = 'Passwords do not match';
+                loginError.textContent = 'PINs do not match';
+                loginError.classList.add('show');
+                return;
+            }
+            
+            // Check if badge exists in personnel
+            const member = masterPersonnel.find(m => m.badge === badge);
+            if (!member) {
+                loginError.textContent = 'Badge number not found in personnel records';
                 loginError.classList.add('show');
                 return;
             }
             
             signupBtn.disabled = true;
-            signupBtn.textContent = 'Creating account...';
+            signupBtn.textContent = 'Creating user...';
+            
+            // Convert badge to email format
+            const email = `${badge}@tps.local`;
             
             try {
+                // Create auth user
                 const { data, error } = await supabaseClient.auth.signUp({
                     email,
                     password
@@ -3380,30 +3873,46 @@
                 
                 if (error) throw error;
                 
-                // Check if email confirmation is required
-                if (data.user && !data.session) {
-                    loginError.textContent = 'Please check your email to confirm your account.';
-                    loginError.style.background = 'rgba(46, 160, 67, 0.2)';
-                    loginError.style.borderColor = '#2ea043';
-                    loginError.style.color = '#2ea043';
-                    loginError.classList.add('show');
-                    toggleAuthMode();
-                } else if (data.session) {
-                    currentUser = data.user;
-                    showMainApp();
+                // Add user role record
+                const { error: roleError } = await supabaseClient
+                    .from('user_roles')
+                    .insert([{
+                        user_id: data.user.id,
+                        badge_number: badge,
+                        role: role,
+                        member_id: member.id
+                    }]);
+                
+                if (roleError) {
+                    console.error('Error creating user role:', roleError);
                 }
+                
+                loginError.textContent = `User created for ${member.name}. They can now sign in.`;
+                loginError.style.background = 'rgba(46, 160, 67, 0.2)';
+                loginError.style.borderColor = '#2ea043';
+                loginError.style.color = '#2ea043';
+                loginError.classList.add('show');
+                
+                // Clear form
+                document.getElementById('signupBadge').value = '';
+                document.getElementById('signupPassword').value = '';
+                document.getElementById('signupConfirm').value = '';
+                document.getElementById('signupRole').value = 'readonly';
+                
             } catch (error) {
                 loginError.textContent = error.message;
                 loginError.classList.add('show');
             } finally {
                 signupBtn.disabled = false;
-                signupBtn.textContent = 'Create Account';
+                signupBtn.textContent = 'Create User';
             }
         }
 
         async function handleLogout() {
             await supabaseClient.auth.signOut();
             currentUser = null;
+            currentUserRole = null;
+            currentUserMember = null;
             showLoginPage();
         }
 
