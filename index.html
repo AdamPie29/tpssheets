@@ -3853,6 +3853,18 @@
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // Helper function to format names as "Surname, First Name" with proper spacing
+        function formatName(name) {
+            if (!name) return '';
+            // If name contains a comma, ensure there's a space after it
+            if (name.includes(',')) {
+                // Split by comma, trim parts, rejoin with ", "
+                const parts = name.split(',').map(p => p.trim());
+                return parts.join(', ');
+            }
+            return name;
+        }
+        
         // Current user
         let currentUser = null;
 
@@ -3956,7 +3968,7 @@
             currentUserMember = masterPersonnel.find(m => m.badge === badge);
             
             if (currentUserMember) {
-                document.getElementById('readonlyUserName').textContent = currentUserMember.name;
+                document.getElementById('readonlyUserName').textContent = formatName(currentUserMember.name);
                 document.getElementById('readonlyUserBadge').textContent = `#${currentUserMember.badge}`;
                 document.getElementById('readonlyUserPlatoon').textContent = `Platoon ${currentUserMember.platoon}`;
             } else {
@@ -4240,7 +4252,7 @@
                     console.error('Error creating user role:', roleError);
                 }
                 
-                loginError.textContent = `User created for ${member.name}. They can now sign in.`;
+                loginError.textContent = `User created for ${formatName(member.name)}. They can now sign in.`;
                 loginError.style.background = 'rgba(46, 160, 67, 0.2)';
                 loginError.style.borderColor = '#2ea043';
                 loginError.style.color = '#2ea043';
@@ -5161,7 +5173,7 @@
             
             tbody.innerHTML = state.specialSituations.map((situation, index) => {
                 const member = situation.memberId ? masterPersonnel.find(m => m.id === situation.memberId) : null;
-                const memberName = member ? member.name : '';
+                const memberName = member ? formatName(member.name) : '';
                 
                 return `
                     <tr class="special-situation-row" data-situation-id="${situation.id}">
@@ -5239,7 +5251,7 @@
             
             dropdown.innerHTML = members.map(member => `
                 <div class="autocomplete-item" onclick="assignSpecialSituationMember(${situationId}, ${member.id})">
-                    <div class="autocomplete-name">${member.name}</div>
+                    <div class="autocomplete-name">${formatName(member.name)}</div>
                     <div class="autocomplete-badge">Platoon ${member.platoon}</div>
                 </div>
             `).join('');
@@ -5258,7 +5270,7 @@
             
             dropdown.innerHTML = members.map(member => `
                 <div class="autocomplete-item" onclick="assignSpecialSituationMember(${situationId}, ${member.id})">
-                    <div class="autocomplete-name">${member.name}</div>
+                    <div class="autocomplete-name">${formatName(member.name)}</div>
                     <div class="autocomplete-badge">Platoon ${member.platoon}</div>
                 </div>
             `).join('');
@@ -5275,7 +5287,7 @@
                 const member = masterPersonnel.find(m => m.id === memberId);
                 const input = document.querySelector(`.member-autocomplete[data-situation="${situationId}"]`);
                 if (input && member) {
-                    input.value = member.name;
+                    input.value = formatName(member.name);
                     input.classList.add('has-assignment');
                     
                     // Show the clear button
@@ -5327,7 +5339,7 @@
                 const item = document.createElement('div');
                 item.className = 'find-autocomplete-item';
                 item.innerHTML = `
-                    <span>${member.name}</span>
+                    <span>${formatName(member.name)}</span>
                     <span style="font-size: 0.8rem; color: var(--text-secondary);">${member.platoon} · ${member.badge}</span>
                 `;
                 item.onclick = () => selectFindMember(member);
@@ -5355,7 +5367,7 @@
                 const item = document.createElement('div');
                 item.className = 'find-autocomplete-item';
                 item.innerHTML = `
-                    <span>${member.name}</span>
+                    <span>${formatName(member.name)}</span>
                     <span style="font-size: 0.8rem; color: var(--text-secondary);">${member.platoon} · ${member.badge}</span>
                 `;
                 item.onclick = () => selectFindMember(member);
@@ -5368,7 +5380,7 @@
         function selectFindMember(member) {
             selectedFindMember = member;
             const input = document.getElementById('findMemberInput');
-            input.value = member.name;
+            input.value = formatName(member.name);
             document.getElementById('findMemberDropdown').classList.remove('active');
             document.removeEventListener('click', closeFindDropdownOnClickOutside);
         }
@@ -5635,7 +5647,7 @@
             
             if (!hasAnyAssignments) {
                 noResults.style.display = 'block';
-                noResults.textContent = `No scheduled assignments found for ${member.name} in the selected date(s).`;
+                noResults.textContent = `No scheduled assignments found for ${formatName(member.name)} in the selected date(s).`;
                 return;
             }
             
@@ -6655,7 +6667,7 @@
                 return `
                     <div class="member-chip" data-id="${member.id}">
                         <div class="member-chip-header">
-                            <span class="member-chip-name">${member.name}</span>
+                            <span class="member-chip-name">${formatName(member.name)}</span>
                             <span class="member-chip-meta">${member.platoon} · ${member.badge}</span>
                         </div>
                         ${tagsHTML ? `<div class="member-chip-tags">${tagsHTML}</div>` : ''}
@@ -6675,7 +6687,7 @@
 
             tbody.innerHTML = entries.map(entry => {
                 const member = entry.memberId ? masterPersonnel.find(m => m.id === entry.memberId) : null;
-                const memberName = member ? member.name : '';
+                const memberName = member ? formatName(member.name) : '';
                 const hasAssignment = !!entry.memberId;
 
                 return `
@@ -6765,11 +6777,11 @@
                 const item = document.createElement('div');
                 item.className = 'autocomplete-item';
                 item.style.cssText = 'padding: 0.4rem 0.6rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;';
-                item.innerHTML = `<span>${member.name}</span><span class="member-tags" style="display: flex; gap: 0.15rem;">${tagsHTML}</span>`;
+                item.innerHTML = `<span>${formatName(member.name)}</span><span class="member-tags" style="display: flex; gap: 0.15rem;">${tagsHTML}</span>`;
                 item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     assignSosOsMember(type, entryId, member.id);
-                    input.value = member.name;
+                    input.value = formatName(member.name);
                     input.classList.add('has-assignment');
                     const clearBtn = input.parentElement.querySelector('.clear-assignment-btn');
                     if (clearBtn) clearBtn.style.display = 'flex';
@@ -7319,7 +7331,7 @@
             let filteredUsers = allUserRoles.filter(user => {
                 // Find member by badge
                 const member = masterPersonnel.find(m => m.badge === user.badge_number);
-                const name = member?.name || 'Unknown';
+                const name = member ? formatName(member.name) : 'Unknown';
                 
                 // Search filter
                 const matchesSearch = !searchTerm || 
@@ -7345,7 +7357,7 @@
             
             tbody.innerHTML = filteredUsers.map(user => {
                 const member = masterPersonnel.find(m => m.badge === user.badge_number);
-                const name = member?.name || 'Unknown';
+                const name = member ? formatName(member.name) : 'Unknown';
                 const platoon = member?.platoon || '-';
                 const createdDate = user.created_at ? new Date(user.created_at).toLocaleDateString() : '-';
                 const isCurrentUser = currentUser && user.user_id === currentUser.id;
@@ -7409,7 +7421,7 @@
                 
                 const user = allUserRoles.find(u => u.id === userRoleId);
                 const member = masterPersonnel.find(m => m.badge === user?.badge_number);
-                console.log(`Role updated: ${member?.name || user?.badge_number} is now ${newRole}`);
+                console.log(`Role updated: ${member ? formatName(member.name) : user?.badge_number} is now ${newRole}`);
                 
             } catch (err) {
                 console.error('Error changing role:', err);
@@ -7474,7 +7486,7 @@
                     return;
                 }
                 
-                showAddUserMessage(`User created successfully for ${member.name}!`, 'success');
+                showAddUserMessage(`User created successfully for ${formatName(member.name)}!`, 'success');
                 
                 // Clear form
                 document.getElementById('newUserBadge').value = '';
@@ -7517,7 +7529,7 @@
 
         async function resetUserPin(badge) {
             const member = masterPersonnel.find(m => m.badge === badge);
-            const name = member?.name || `Badge #${badge}`;
+            const name = member ? formatName(member.name) : `Badge #${badge}`;
             
             const newPin = prompt(`Enter new PIN for ${name} (min 6 digits):`);
             
@@ -7621,7 +7633,7 @@
                 <div class="personnel-card">
                     <button class="edit-member-btn" onclick="editMember(${member.id})" title="Edit Member">✎</button>
                     <div class="personnel-card-header">
-                        <span class="personnel-name">${member.name}</span>
+                        <span class="personnel-name">${formatName(member.name)}</span>
                         <span class="personnel-meta">${member.platoon} · ${member.badge}</span>
                     </div>
                     ${tagsHTML ? `<div class="personnel-tags">${tagsHTML}</div>` : ''}
@@ -7687,7 +7699,7 @@
                 <div class="member-item ${showSelect && member.selected ? 'selected' : ''}" 
                      data-id="${member.id}">
                     <div class="member-info">
-                        <div class="member-name">${member.name}</div>
+                        <div class="member-name">${formatName(member.name)}</div>
                         <div class="member-role">Platoon ${member.platoon}</div>
                     </div>
                     <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
@@ -7776,13 +7788,13 @@
             
             select.innerHTML = '<option value="">Select member to add...</option>';
             otherMembers.forEach(member => {
-                select.innerHTML += `<option value="${member.id}">${member.name} (Platoon ${member.platoon})</option>`;
+                select.innerHTML += `<option value="${member.id}">${formatName(member.name)} (Platoon ${member.platoon})</option>`;
             });
             
             // Populate swap member options with current platoon
             swapSelect.innerHTML = '<option value="">Select member being replaced...</option>';
             state.platoonMembers.forEach(member => {
-                swapSelect.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+                swapSelect.innerHTML += `<option value="${member.id}">${formatName(member.name)}</option>`;
             });
         }
 
@@ -7844,7 +7856,7 @@
                     <div class="swap-info">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
                             <div>
-                                <div class="member-name">${member.name}</div>
+                                <div class="member-name">${formatName(member.name)}</div>
                                 <div class="member-role">Platoon ${member.platoon} - ${reasonText}</div>
                                 ${swapInfo}
                             </div>
@@ -7906,7 +7918,7 @@
             const member = masterPersonnel.find(m => m.id === memberId);
             const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
             if (input && member) {
-                input.value = member.name;
+                input.value = formatName(member.name);
                 input.classList.add('has-assignment');
                 input.parentElement.classList.add('has-value');
             }
@@ -7984,7 +7996,7 @@
                 return `
                     <div class="member-chip ${isPartial ? 'partial' : ''}" data-id="${member.id}">
                         <div class="member-chip-header">
-                            <span class="member-chip-name">${member.name}</span>
+                            <span class="member-chip-name">${formatName(member.name)}</span>
                             <span class="member-chip-meta">${member.platoon} · ${member.badge}</span>
                         </div>
                         ${tagsHTML ? `<div class="member-chip-tags">${tagsHTML}</div>` : ''}
@@ -8648,7 +8660,7 @@
                 if (member) {
                     const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
                     if (input) {
-                        input.value = member.name;
+                        input.value = formatName(member.name);
                         input.classList.add('has-assignment');
                         input.parentElement.classList.add('has-value');
                     }
@@ -8662,7 +8674,7 @@
                 if (member) {
                     const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="calltake"]`);
                     if (input) {
-                        input.value = member.name;
+                        input.value = formatName(member.name);
                         input.classList.add('has-assignment');
                         input.parentElement.classList.add('has-value');
                     }
@@ -8749,7 +8761,7 @@
                 html += `
                     <div class="autocomplete-item ${isAssigned ? 'assigned' : ''}" 
                          onclick="selectAutocompleteItem(${member.id}, '${deskNum}', '${deskType}')">
-                        <div class="member-name">${member.name}</div>
+                        <div class="member-name">${formatName(member.name)}</div>
                         <div class="member-info">Platoon ${member.platoon} • Badge: ${member.badge}${isAssigned ? ' • (assigned)' : ''}</div>
                         ${tagsHTML ? `<div class="member-tags">${tagsHTML}</div>` : ''}
                     </div>
@@ -8782,7 +8794,7 @@
             const member = masterPersonnel.find(m => m.id === memberId);
             const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="${deskType}"]`);
             if (input && member) {
-                input.value = member.name;
+                input.value = formatName(member.name);
                 input.classList.add('has-assignment');
                 input.parentElement.classList.add('has-value');
             }
@@ -9133,7 +9145,7 @@
             
             // Check if member has Dispatcher tag
             if (!member.tags || !member.tags.includes('Dispatcher')) {
-                alert(`Cannot assign ${member.name} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
+                alert(`Cannot assign ${formatName(member.name)} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
                 // Reset the input
                 const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
                 if (input) input.value = '';
@@ -9166,7 +9178,7 @@
             // Update the input value
             const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
             if (input) {
-                input.value = member.name;
+                input.value = formatName(member.name);
                 input.classList.add('has-assignment');
                 input.parentElement.classList.add('has-value');
             }
@@ -9400,7 +9412,7 @@
             if (!member) return;
             
             // Populate modal with member info
-            document.getElementById('editMemberName').textContent = member.name;
+            document.getElementById('editMemberName').textContent = formatName(member.name);
             document.getElementById('editMemberPlatoon').textContent = `Platoon ${member.platoon} • Badge: ${member.badge}`;
             
             // Create tag checkboxes
@@ -9455,7 +9467,7 @@
             closeEditMemberModal();
             
             // Show confirmation
-            console.log(`Updated tags for ${member.name}:`, selectedTags);
+            console.log(`Updated tags for ${formatName(member.name)}:`, selectedTags);
         }
 
         async function deleteMember() {
@@ -9464,7 +9476,7 @@
             const member = masterPersonnel.find(m => m.id === editingMemberId);
             if (!member) return;
             
-            const confirmed = confirm(`Are you sure you want to delete ${member.name}?\n\nPlatoon ${member.platoon} · Badge: ${member.badge}\n\nThis action cannot be undone. The member will be removed from the database and any current desk assignments.`);
+            const confirmed = confirm(`Are you sure you want to delete ${formatName(member.name)}?\n\nPlatoon ${member.platoon} · Badge: ${member.badge}\n\nThis action cannot be undone. The member will be removed from the database and any current desk assignments.`);
             if (!confirmed) return;
             
             // Delete from database
@@ -10014,7 +10026,7 @@
                 html += `
                     <div class="autocomplete-item ${isAssigned ? 'assigned' : ''}" 
                          onclick="selectRelieverAutocompleteItem(${member.id}, ${relieverId})">
-                        <div class="member-name">${member.name}</div>
+                        <div class="member-name">${formatName(member.name)}</div>
                         <div class="member-info">Platoon ${member.platoon} • Badge: ${member.badge}${isAssigned ? ' • (assigned)' : ''}</div>
                         ${tagsHTML ? `<div class="member-tags">${tagsHTML}</div>` : ''}
                     </div>
@@ -10043,7 +10055,7 @@
             const member = masterPersonnel.find(m => m.id === memberId);
             const input = document.querySelector(`.member-autocomplete[data-reliever="${relieverId}"]`);
             if (input && member) {
-                input.value = member.name;
+                input.value = formatName(member.name);
                 input.classList.add('has-assignment');
                 input.parentElement.classList.add('has-value');
             }
@@ -10131,7 +10143,7 @@
                 }
                 
                 memberOptions += availableDispatcherMembers.map(member => 
-                    `<option value="${member.id}" ${reliever.memberId === member.id ? 'selected' : ''}>${member.name}</option>`
+                    `<option value="${member.id}" ${reliever.memberId === member.id ? 'selected' : ''}>${formatName(member.name)}</option>`
                 ).join('');
                 
                 // Get assigned member name if exists
