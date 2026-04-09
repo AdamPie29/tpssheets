@@ -10221,17 +10221,17 @@
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">Position Hours:</label>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
-                                    <input type="time" 
-                                           class="form-input" 
+                                    <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
                                            value="${positionHours.start || ''}"
                                            onchange="updateRelieverPositionHours(${reliever.id}, 'start', this.value)"
-                                           style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
-                                    <span style="color: var(--text-secondary);">to</span>
-                                    <input type="time" 
-                                           class="form-input" 
+                                           oninput="formatTimeInput(this)"
+                                           style="width: 70px;">
+                                    <span style="color: var(--text-secondary);">-</span>
+                                    <input type="text" class="time-input" placeholder="HH:MM" maxlength="5"
                                            value="${positionHours.end || ''}"
                                            onchange="updateRelieverPositionHours(${reliever.id}, 'end', this.value)"
-                                           style="flex: 1; padding: 0.4rem 0.5rem; font-size: 0.85rem;">
+                                           oninput="formatTimeInput(this)"
+                                           style="width: 70px;">
                                 </div>
                                 
                                 <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;">Notes:</label>
