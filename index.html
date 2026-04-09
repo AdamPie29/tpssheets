@@ -1149,6 +1149,12 @@
             border-color: rgba(74, 222, 128, 0.3);
         }
 
+        .tag-a05 {
+            background: rgba(168, 85, 247, 0.15);
+            color: #c084fc;
+            border-color: rgba(192, 132, 252, 0.3);
+        }
+
         .platoon-section {
             margin-bottom: 1.5rem;
         }
@@ -6682,7 +6688,8 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
 
             if (supervisors.length === 0) {
@@ -6793,7 +6800,7 @@
             const tagClasses = {
                 'Calltaker': 'tag-calltaker', 'Dispatcher': 'tag-dispatcher',
                 'ODT': 'tag-odt', 'TRNG': 'tag-trng', 'TCL': 'tag-tcl', 'ROC': 'tag-roc',
-                'SOS': 'tag-sos', 'OS': 'tag-os', 'AOS': 'tag-aos'
+                'SOS': 'tag-sos', 'OS': 'tag-os', 'AOS': 'tag-aos', 'A05': 'tag-a05'
             };
 
             const dropdown = document.createElement('div');
@@ -7653,7 +7660,8 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
             
             const tagsHTML = member.tags.map(tag => 
@@ -7717,7 +7725,8 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
             
             // Create tag badges for the first 2-3 tags
@@ -7996,7 +8005,8 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
             
             container.innerHTML = sortedMembers.map(member => {
@@ -9434,7 +9444,7 @@
 
         // Edit Member Functions
         let editingMemberId = null;
-        const allAvailableTags = ['Calltaker', 'Dispatcher', 'ODT', 'TRNG', 'TCL', 'ROC', 'SOS', 'OS', 'AOS'];
+        const allAvailableTags = ['Calltaker', 'Dispatcher', 'ODT', 'TRNG', 'TCL', 'ROC', 'SOS', 'OS', 'AOS', 'A05'];
 
         function editMember(memberId) {
             editingMemberId = memberId;
