@@ -6691,6 +6691,12 @@
                 'AOS': 'tag-aos',
                 'A05': 'tag-a05'
             };
+            
+            // Display abbreviations for tags
+            const tagDisplayNames = {
+                'Calltaker': 'C',
+                'Dispatcher': 'D'
+            };
 
             if (supervisors.length === 0) {
                 container.innerHTML = '<div style="color: var(--text-secondary); font-size: 0.85rem; padding: 0.5rem;">No members with SOS, OS, or AOS certifications found.</div>';
@@ -6699,7 +6705,7 @@
 
             container.innerHTML = supervisors.map(member => {
                 const tagsHTML = member.tags.map(tag => 
-                    `<span class="personnel-tag ${tagClasses[tag]}">${tag}</span>`
+                    `<span class="personnel-tag ${tagClasses[tag]}" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
                 ).join('');
 
                 return `
@@ -6802,6 +6808,8 @@
                 'ODT': 'tag-odt', 'TRNG': 'tag-trng', 'TCL': 'tag-tcl', 'ROC': 'tag-roc',
                 'SOS': 'tag-sos', 'OS': 'tag-os', 'AOS': 'tag-aos', 'A05': 'tag-a05'
             };
+            
+            const tagDisplayNames = { 'Calltaker': 'C', 'Dispatcher': 'D' };
 
             const dropdown = document.createElement('div');
             dropdown.className = 'autocomplete-dropdown';
@@ -6809,7 +6817,7 @@
 
             members.sort((a, b) => a.name.localeCompare(b.name)).forEach(member => {
                 const tagsHTML = member.tags.map(tag => 
-                    `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.55rem; padding: 0.05rem 0.25rem;">${tag}</span>`
+                    `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.55rem; padding: 0.05rem 0.25rem;" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
                 ).join(' ');
 
                 const item = document.createElement('div');
@@ -7664,8 +7672,14 @@
                 'A05': 'tag-a05'
             };
             
+            // Display abbreviations for tags
+            const tagDisplayNames = {
+                'Calltaker': 'C',
+                'Dispatcher': 'D'
+            };
+            
             const tagsHTML = member.tags.map(tag => 
-                `<span class="personnel-tag ${tagClasses[tag]}">${tag}</span>`
+                `<span class="personnel-tag ${tagClasses[tag]}" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
             ).join('');
             
             return `
@@ -7729,10 +7743,12 @@
                 'A05': 'tag-a05'
             };
             
+            const tagDisplayNames = { 'Calltaker': 'C', 'Dispatcher': 'D' };
+            
             // Create tag badges for the first 2-3 tags
             const displayTags = member.tags.slice(0, 3);
             const tagsHTML = displayTags.map(tag => 
-                `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;">${tag}</span>`
+                `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
             ).join('');
             
             return `
@@ -8009,6 +8025,8 @@
                 'A05': 'tag-a05'
             };
             
+            const tagDisplayNames = { 'Calltaker': 'C', 'Dispatcher': 'D' };
+            
             container.innerHTML = sortedMembers.map(member => {
                 // Count how many desks this member is assigned to
                 const dispatchAssignmentCount = Object.values(state.assignments).filter(id => id === member.id).length;
@@ -8030,7 +8048,7 @@
                 
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
-                        `<span class="personnel-tag ${tagClasses[tag]}">${tag}</span>`
+                        `<span class="personnel-tag ${tagClasses[tag]}" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
                       ).join('')
                     : '';
                 
@@ -8783,8 +8801,11 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
+            
+            const tagDisplayNames = { 'Calltaker': 'C', 'Dispatcher': 'D' };
             
             // Build dropdown HTML
             let html = '';
@@ -8795,7 +8816,7 @@
                 
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
-                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;">${tag}</span>`
+                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
                       ).join('')
                     : '';
                 
@@ -10056,8 +10077,11 @@
                 'ROC': 'tag-roc',
                 'SOS': 'tag-sos',
                 'OS': 'tag-os',
-                'AOS': 'tag-aos'
+                'AOS': 'tag-aos',
+                'A05': 'tag-a05'
             };
+            
+            const tagDisplayNames = { 'Calltaker': 'C', 'Dispatcher': 'D' };
             
             // Build dropdown HTML
             let html = '';
@@ -10069,7 +10093,7 @@
                 
                 const tagsHTML = member.tags && member.tags.length > 0 
                     ? member.tags.map(tag => 
-                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;">${tag}</span>`
+                        `<span class="personnel-tag ${tagClasses[tag]}" style="font-size: 0.65rem; padding: 0.1rem 0.3rem;" title="${tag}">${tagDisplayNames[tag] || tag}</span>`
                       ).join('')
                     : '';
                 
