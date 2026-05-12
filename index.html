@@ -8764,15 +8764,30 @@
         
         // Build autocomplete list
         function buildAutocompleteList(dropdown, filter, deskNum, deskType) {
+            // Desks that allow Calltaker-only members (no Dispatcher certification required)
+            const calltakerAllowedDesks = ['02', '05', '08', '09', '21', '22', '24'];
+            
             // Get appropriate members based on desk type
             // Exclude SOS/OS members from dispatch and call take assignments
             let availableMembers;
             if (deskType === 'dispatch') {
-                // Only dispatchers for dispatch desks, exclude SOS/OS
-                availableMembers = masterPersonnel.filter(m => 
-                    m.tags && m.tags.includes('Dispatcher') && 
-                    !m.tags.includes('SOS') && !m.tags.includes('OS')
-                );
+                // Check if this desk allows calltaker-only members
+                const baseDeskNum = deskNum.includes('-') ? deskNum.split('-')[0] : deskNum;
+                const allowsCalltakers = calltakerAllowedDesks.includes(baseDeskNum);
+                
+                if (allowsCalltakers) {
+                    // Allow both Dispatchers and Calltakers for these specific desks
+                    availableMembers = masterPersonnel.filter(m => 
+                        m.tags && (m.tags.includes('Dispatcher') || m.tags.includes('Calltaker')) && 
+                        !m.tags.includes('SOS') && !m.tags.includes('OS')
+                    );
+                } else {
+                    // Only dispatchers for other dispatch desks, exclude SOS/OS
+                    availableMembers = masterPersonnel.filter(m => 
+                        m.tags && m.tags.includes('Dispatcher') && 
+                        !m.tags.includes('SOS') && !m.tags.includes('OS')
+                    );
+                }
             } else {
                 // All members for call take desks, exclude SOS/OS
                 availableMembers = masterPersonnel.filter(m => 
@@ -9205,9 +9220,21 @@
             const isInstance = deskNum.includes('-');
             const baseDeskNum = isInstance ? deskNum.split('-')[0] : deskNum;
             
-            // Check if member has Dispatcher tag
-            if (!member.tags || !member.tags.includes('Dispatcher')) {
-                alert(`Cannot assign ${formatName(member.name)} to dispatch desk.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to dispatch desks.`);
+            // Desks that allow Calltaker-only members (no Dispatcher certification required)
+            const calltakerAllowedDesks = ['02', '05', '08', '09', '21', '22', '24'];
+            const allowsCalltakers = calltakerAllowedDesks.includes(baseDeskNum);
+            
+            // Check if member has required certification
+            const hasDispatcher = member.tags && member.tags.includes('Dispatcher');
+            const hasCalltaker = member.tags && member.tags.includes('Calltaker');
+            
+            if (!hasDispatcher && !(allowsCalltakers && hasCalltaker)) {
+                const deskLabel = deskLabels[baseDeskNum] || `PD${baseDeskNum}`;
+                if (allowsCalltakers) {
+                    alert(`Cannot assign ${formatName(member.name)} to ${deskLabel}.\n\nThis member does not have Dispatcher or Calltaker certification.`);
+                } else {
+                    alert(`Cannot assign ${formatName(member.name)} to ${deskLabel}.\n\nThis member does not have Dispatcher certification.\n\nOnly members with the Dispatcher tag can be assigned to this desk.`);
+                }
                 // Reset the input
                 const input = document.querySelector(`.member-autocomplete[data-desk="${deskNum}"][data-type="dispatch"]`);
                 if (input) input.value = '';
