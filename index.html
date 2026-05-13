@@ -814,6 +814,50 @@
             font-size: 0.95rem;
         }
 
+        /* ===== LIGHT THEME OVERRIDES ===== */
+        /* Header buttons: white text and white borders */
+        body.theme-light .app-header .btn-secondary {
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+        }
+        body.theme-light .app-header .btn-secondary:hover {
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        body.theme-light .app-header .logout-btn {
+            color: #ffffff !important;
+            border-color: #ffffff !important;
+        }
+        body.theme-light .app-header .user-email {
+            color: #ffffff !important;
+        }
+
+        /* Badge number on readonly user page: white */
+        body.theme-light .readonly-badge {
+            color: #ffffff !important;
+        }
+
+        /* Section titles (Dispatch / Call Take / Special Situations / etc): white */
+        body.theme-light .card-title {
+            color: #ffffff !important;
+        }
+        body.theme-light .seating-chart-title {
+            color: #ffffff !important;
+        }
+
+        /* The Count page time labels and y-axis numbers: white */
+        body.theme-light .count-bar-label {
+            color: #ffffff !important;
+        }
+        body.theme-light .count-y-axis {
+            color: #ffffff !important;
+        }
+        body.theme-light .count-y-axis span {
+            color: #ffffff !important;
+        }
+        /* ===== END LIGHT THEME OVERRIDES ===== */
+
         .btn-accent {
             background: var(--accent);
             border: 2px solid var(--accent);
@@ -4568,6 +4612,14 @@
             Object.entries(theme).forEach(([varName, value]) => {
                 root.style.setProperty(varName, value);
             });
+            // Toggle light theme class on body for theme-specific overrides
+            if (document.body) {
+                if (themeName === 'light') {
+                    document.body.classList.add('theme-light');
+                } else {
+                    document.body.classList.remove('theme-light');
+                }
+            }
             // Update active state in dropdown
             document.querySelectorAll('.theme-option').forEach(opt => {
                 opt.classList.toggle('active', opt.dataset.theme === themeName);
