@@ -746,9 +746,9 @@
         }
 
         .container {
-            max-width: 1600px;
-            margin: 2rem auto;
-            padding: 0 2rem;
+            max-width: calc(100% - 0.5rem);
+            margin: 0.25rem auto;
+            padding: 0 0.25rem;
         }
 
         .step-indicator {
@@ -1282,6 +1282,39 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .members-collapse-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+        }
+
+        .members-collapse-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .members-panel.collapsed #availableMembers {
+            display: none !important;
+        }
+
+        .members-panel.collapsed .members-collapse-btn #membersCollapseIcon {
+            transform: rotate(-90deg);
+        }
+
+        #membersCollapseIcon {
+            transition: transform 0.2s ease;
+            display: inline-block;
         }
 
         .members-grid {
@@ -3123,21 +3156,25 @@
         <!-- Main Assignment Page -->
         <div id="page3" class="page active">
             <div class="schedule-layout">
-                <div class="members-panel">
+                <div class="members-panel" id="membersPanel">
                     <div class="members-panel-title">
                         <span>Available Members</span>
+                        <button class="members-collapse-btn" id="membersCollapseBtn" onclick="toggleMembersPanel()" title="Expand/Collapse">
+                            <span id="membersCollapseIcon">▼</span>
+                        </button>
                     </div>
                     <div style="padding: 0.5rem; border-bottom: 1px solid var(--border);">
-                        <select id="platoonFilter" class="form-select" style="width: 100%;" onchange="loadAvailableMembers()">
-                            <option value="">All Platoons</option>
+                        <select id="platoonFilter" class="form-select" style="width: 100%;" onchange="onPlatoonFilterChange()">
+                            <option value="">Select Platoon...</option>
                             <option value="A">Platoon A</option>
                             <option value="B">Platoon B</option>
                             <option value="C">Platoon C</option>
                             <option value="D">Platoon D</option>
                             <option value="E">Platoon E</option>
+                            <option value="all">All Platoons</option>
                         </select>
                     </div>
-                    <div id="availableMembers" class="members-grid"></div>
+                    <div id="availableMembers" class="members-grid" style="display: none;"></div>
                 </div>
 
                 <div style="margin: 1.5rem 0; display: flex; gap: 1rem; align-items: center;">
@@ -7992,6 +8029,55 @@
             setTimeout(() => validateBreakTimes(deskNum, 'calltake', memberId), 100);
         }
 
+        // Members panel collapse state
+        let membersPanelExpanded = false;
+
+        function toggleMembersPanel() {
+            const panel = document.getElementById('membersPanel');
+            const membersGrid = document.getElementById('availableMembers');
+            const icon = document.getElementById('membersCollapseIcon');
+            
+            membersPanelExpanded = !membersPanelExpanded;
+            
+            if (membersPanelExpanded) {
+                panel.classList.remove('collapsed');
+                membersGrid.style.display = 'grid';
+                icon.textContent = '▼';
+            } else {
+                panel.classList.add('collapsed');
+                membersGrid.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        function onPlatoonFilterChange() {
+            const platoonFilter = document.getElementById('platoonFilter');
+            const selectedValue = platoonFilter.value;
+            
+            if (selectedValue && selectedValue !== '') {
+                // A platoon was selected, expand and load members
+                if (!membersPanelExpanded) {
+                    membersPanelExpanded = true;
+                    const panel = document.getElementById('membersPanel');
+                    const membersGrid = document.getElementById('availableMembers');
+                    const icon = document.getElementById('membersCollapseIcon');
+                    panel.classList.remove('collapsed');
+                    membersGrid.style.display = 'grid';
+                    icon.textContent = '▼';
+                }
+                loadAvailableMembers();
+            } else {
+                // No selection, collapse
+                membersPanelExpanded = false;
+                const panel = document.getElementById('membersPanel');
+                const membersGrid = document.getElementById('availableMembers');
+                const icon = document.getElementById('membersCollapseIcon');
+                panel.classList.add('collapsed');
+                membersGrid.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
         function loadAvailableMembers() {
             const container = document.getElementById('availableMembers');
             const platoonFilter = document.getElementById('platoonFilter');
@@ -8000,7 +8086,8 @@
             // Get all members from master personnel, filtered by platoon if selected
             // Exclude members with SOS or OS certifications (they appear in SOS/OS section only)
             let availableMembers = masterPersonnel.filter(member => {
-                if (selectedPlatoon && member.platoon !== selectedPlatoon) {
+                // Filter by platoon (skip if "all" is selected)
+                if (selectedPlatoon && selectedPlatoon !== 'all' && member.platoon !== selectedPlatoon) {
                     return false;
                 }
                 if (member.tags && (member.tags.includes('SOS') || member.tags.includes('OS'))) {
