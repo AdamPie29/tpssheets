@@ -877,6 +877,20 @@
         body.theme-light .seating-chart th {
             color: #ffffff !important;
         }
+
+        /* The Count page: time block headers (06:30 etc) in white */
+        body.theme-light .count-table-header {
+            color: #ffffff !important;
+        }
+        /* The Count page: count cells get white background, with red/green font */
+        body.theme-light .count-table-cell.meets-min {
+            background: #ffffff !important;
+            color: #16a34a !important;
+        }
+        body.theme-light .count-table-cell.below-min {
+            background: #ffffff !important;
+            color: #dc2626 !important;
+        }
         /* ===== END LIGHT THEME OVERRIDES ===== */
 
         .btn-accent {
@@ -2500,7 +2514,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            font-size: 0.75rem;
+            font-size: 1rem;
             font-weight: 600;
             color: var(--text-secondary);
             background: var(--bg-dark);
@@ -2546,7 +2560,7 @@
         }
 
         .count-bar-label {
-            font-size: 0.55rem;
+            font-size: 1rem;
             color: var(--text-secondary);
             writing-mode: vertical-rl;
             text-orientation: mixed;
@@ -2568,7 +2582,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            font-size: 0.7rem;
+            font-size: 1rem;
             color: var(--text-secondary);
         }
 
@@ -2591,7 +2605,7 @@
             color: var(--text-primary);
             padding: 0.5rem 0.25rem;
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 1rem;
             font-weight: 600;
             border-right: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
@@ -2604,7 +2618,7 @@
         .count-table-cell {
             padding: 0.5rem 0.25rem;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 1rem;
             font-weight: 600;
             border-right: 1px solid var(--border);
         }
@@ -5390,7 +5404,7 @@
                     const count = counts[slot];
                     const minReq = minCallTakerRequirements[timeKey] || 11;
                     const meetsMin = count >= minReq;
-                    tableHTML += `<div class="count-table-cell ${meetsMin ? 'meets-min' : 'below-min'}">${count}(${minReq})</div>`;
+                    tableHTML += `<div class="count-table-cell ${meetsMin ? 'meets-min' : 'below-min'}">${count} (${minReq})</div>`;
                 });
                 tableHTML += '</div>';
             });
