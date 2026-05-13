@@ -870,7 +870,7 @@
             color: #ffffff !important;
         }
         body.theme-light .reliever-desk-input {
-            color: #ffffff !important;
+            color: #000000 !important;
         }
         /* ===== END LIGHT THEME OVERRIDES ===== */
 
@@ -2311,7 +2311,7 @@
 
         .reliever-schedule-grid {
             display: grid;
-            grid-template-columns: repeat(12, 1fr);
+            grid-template-columns: repeat(11, 1fr);
             gap: 0;
             margin-bottom: 0.25rem;
             border: 1px solid var(--border);
@@ -5308,10 +5308,11 @@
             let maxCount = 15;
             
             countTimeSlots.forEach(slot => {
+                const isNextDay = slot.endsWith('b');
                 const timeKey = slot.replace('b', '');
                 const hour = parseInt(timeKey.substring(0, 2));
                 const minute = parseInt(timeKey.substring(2));
-                counts[slot] = calculateCallTakerCount(hour, minute);
+                counts[slot] = calculateCallTakerCount(hour, minute, isNextDay);
                 if (counts[slot] > maxCount) maxCount = counts[slot];
             });
             
@@ -5392,7 +5393,7 @@
             tableContainer.innerHTML = tableHTML;
         }
 
-        function calculateCallTakerCount(hour, minute) {
+        function calculateCallTakerCount(hour, minute, isNextDay = false) {
             let count = 0;
             const checkTime = hour * 60 + minute;
             
@@ -5537,7 +5538,7 @@
             state.relieverDuties.forEach(reliever => {
                 if (!reliever.memberId || !reliever.schedule) return;
                 
-                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}${isNextDay ? 'b' : ''}`;
                 const assignedDesk = reliever.schedule[timeKey];
                 
                 // Skip if no assignment, or if on break (BR) or lunch (LU)
@@ -10674,14 +10675,15 @@
             
             container.innerHTML = state.relieverDuties.map(reliever => {
                 const timeSlots = [
-                    ['0630', '0645', '0700', '0715', '0730', '0745', '0800', '0815', '0830', '0845', '0900', '0915'],
-                    ['0930', '0945', '1000', '1015', '1030', '1045', '1100', '1115', '1130', '1145', '1200', '1215'],
-                    ['1230', '1245', '1300', '1315', '1330', '1345', '1400', '1415', '1430', '1445', '1500', '1515'],
-                    ['1530', '1545', '1600', '1615', '1630', '1645', '1700', '1715', '1730', '1745', '1800', '1815'],
-                    ['1830', '1845', '1900', '1915', '1930', '1945', '2000', '2015', '2030', '2045', '2100', '2115'],
-                    ['2130', '2145', '2200', '2215', '2230', '2245', '2300', '2315', '2330', '2345', '0000', '0015'],
-                    ['0030', '0045', '0100', '0115', '0130', '0145', '0200', '0215', '0230', '0245', '0300', '0315'],
-                    ['0330', '0345', '0400', '0415', '0430', '0445', '0500', '0515', '0530', '0545', '0600', '0615']
+                    ['0630', '0645', '0700', '0715', '0730', '0745', '0800', '0815', '0830', '0845', '0900'],
+                    ['0915', '0930', '0945', '1000', '1015', '1030', '1045', '1100', '1115', '1130', '1145'],
+                    ['1200', '1215', '1230', '1245', '1300', '1315', '1330', '1345', '1400', '1415', '1430'],
+                    ['1445', '1500', '1515', '1530', '1545', '1600', '1615', '1630', '1645', '1700', '1715'],
+                    ['1730', '1745', '1800', '1815', '1830', '1845', '1900', '1915', '1930', '1945', '2000'],
+                    ['2015', '2030', '2045', '2100', '2115', '2130', '2145', '2200', '2215', '2230', '2245'],
+                    ['2300', '2315', '2330', '2345', '0000', '0015', '0030', '0045', '0100', '0115', '0130'],
+                    ['0145', '0200', '0215', '0230', '0245', '0300', '0315', '0330', '0345', '0400', '0415'],
+                    ['0430', '0445', '0500', '0515', '0530', '0545', '0600', '0615', '0630b', '0645b', '0700b']
                 ];
                 
                 // Check if current reliever's member is still assigned to this reliever
@@ -10767,13 +10769,14 @@
                                             const isInRange = isTimeInPositionRange(time, startTime, endTime);
                                             const hasValue = reliever.schedule[time] && reliever.schedule[time].trim() !== '';
                                             const highlightClass = isInRange ? (hasValue ? 'position-filled' : 'position-highlight') : '';
+                                            const displayTime = time.replace(/[^0-9]/g, '');
                                             return `
                                             <div>
-                                                <div class="reliever-time-header ${highlightClass}">${time.substring(0, 2)}:${time.substring(2)}</div>
+                                                <div class="reliever-time-header ${highlightClass}">${displayTime.substring(0, 2)}:${displayTime.substring(2)}</div>
                                                 <input 
                                                     type="text" 
                                                     class="reliever-desk-input ${highlightClass}" 
-                                                    value="${reliever.schedule[time]}"
+                                                    value="${reliever.schedule[time] || ''}"
                                                     placeholder=""
                                                     onchange="updateRelieverSchedule(${reliever.id}, '${time}', this.value)"
                                                 />
@@ -10795,19 +10798,63 @@
         function isTimeInPositionRange(slotTime, startTime, endTime) {
             if (!startTime || !endTime) return false;
             
-            // Convert times to comparable numbers (handle overnight shifts)
-            const slotNum = parseInt(slotTime);
-            const startNum = parseInt(startTime);
-            const endNum = parseInt(endTime);
+            // The reliever grid is a 99-slot linear timeline starting at 06:30.
+            // Each slot gets a unique "minutes from 06:30" offset:
+            //   - Morning row 1 "0630" = 0, "0900" = 150
+            //   - Last row "0530" = 1380, "0615" = 1425
+            //   - Next-day "0630b" = 1440, "0700b" = 1470
+            //
+            // The user enters position hours as wall-clock times. We need to find
+            // which contiguous block of grid cells the range covers.
             
-            // Handle overnight shift (e.g., 22:00 to 06:00)
-            if (endNum < startNum) {
-                // Overnight: slot is in range if it's >= start OR < end
-                return slotNum >= startNum || slotNum < endNum;
-            } else {
-                // Normal: slot is in range if it's >= start AND < end
-                return slotNum >= startNum && slotNum < endNum;
+            const CHART_START_MINUTES = 6 * 60 + 30; // 06:30
+            const DAY = 24 * 60;
+            
+            const slotToOffset = (key) => {
+                const isNextDay = key.endsWith('b');
+                const digits = key.replace(/[^0-9]/g, '');
+                const h = parseInt(digits.substring(0, 2), 10);
+                const m = parseInt(digits.substring(2), 10);
+                let offset = (h * 60 + m) - CHART_START_MINUTES;
+                if (offset < 0 || isNextDay) offset += DAY;
+                return offset;
+            };
+            
+            // Raw minutes (without wrap) so we can detect "before chart start"
+            const rawMinutes = (key) => {
+                const digits = key.replace(/[^0-9]/g, '');
+                const h = parseInt(digits.substring(0, 2), 10);
+                const m = parseInt(digits.substring(2), 10);
+                return (h * 60 + m) - CHART_START_MINUTES;
+            };
+            
+            const slotOffset = slotToOffset(slotTime);
+            let startOffset = slotToOffset(startTime);
+            let endOffset = slotToOffset(endTime);
+            
+            // If start time is naturally before chart start (e.g. 05:30 -> offset wrapped to 1380),
+            // then this position straddles the chart-start boundary. We treat the range as 
+            // starting in the "previous loop" so it extends naturally into row 1 morning cells.
+            const startIsBeforeChartStart = rawMinutes(startTime) < 0;
+            if (startIsBeforeChartStart) {
+                startOffset -= DAY; // Move start into negative territory
+                if (endOffset <= startOffset) endOffset += DAY;
+                
+                // The slot is in range if its primary offset is in [startOffset, endOffset).
+                // For slots that are themselves in row 9's wrap-around zone (wall-clock time
+                // < 06:30 chart start, no 'b' suffix), also check the shifted offset so they
+                // line up with the negative startOffset.
+                const slotIsRow9Wrap = rawMinutes(slotTime) < 0 && !slotTime.endsWith('b');
+                if (slotIsRow9Wrap) {
+                    const shifted = slotOffset - DAY;
+                    return shifted >= startOffset && shifted < endOffset;
+                }
+                return slotOffset >= startOffset && slotOffset < endOffset;
             }
+            
+            // Normal case: start time is at or after chart start (06:30)
+            if (endOffset <= startOffset) endOffset += DAY;
+            return slotOffset >= startOffset && slotOffset < endOffset;
         }
         
         // Update reliever position hours
@@ -11056,12 +11103,16 @@
                         }
                     }
                     
-                    // Check reliever assignments (only for non-previous-day checks)
-                    if (!treatAsPreviousDay && schedule.relieverDuties) {
+                    // Check reliever assignments
+                    // For next-day window (treatAsPreviousDay + isNextDay), look up with 'b' suffix
+                    // Skip relievers entirely when looking at previous date's overnight (not our schedule)
+                    const checkRelievers = !treatAsPreviousDay || isNextDay;
+                    if (checkRelievers && schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (!reliever.memberId || !reliever.schedule) return;
                             
-                            const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                            const suffix = (isNextDay && treatAsPreviousDay) ? 'b' : '';
+                            const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}${suffix}`;
                             const assignedDesk = reliever.schedule[timeKey];
                             
                             // Skip if no assignment, or if on break (BR) or lunch (LU)
@@ -11451,11 +11502,15 @@
                         });
                     }
                     
-                    // Check reliever duties for this schedule (only for non-previous-day checks)
-                    if (!treatAsPreviousDay && schedule.relieverDuties) {
+                    // Check reliever duties for this schedule
+                    // For next-day window (treatAsPreviousDay + isNextDay), look up with 'b' suffix
+                    // Skip relievers entirely when looking at previous date's overnight (not our schedule)
+                    const checkRelievers = !treatAsPreviousDay || isNextDay;
+                    if (checkRelievers && schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (reliever.memberId && reliever.schedule) {
-                                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
+                                const suffix = (isNextDay && treatAsPreviousDay) ? 'b' : '';
+                                const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}${suffix}`;
                                 const assignedDesk = reliever.schedule[timeKey];
                                 
                                 // Skip if no assignment, or if on break (BR) or lunch (LU)
