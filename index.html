@@ -748,6 +748,72 @@
             transform: translateY(-2px);
         }
 
+        /* Theme Dropdown Styles */
+        .theme-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            min-width: 200px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .theme-dropdown-header {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .theme-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            color: var(--text-primary);
+        }
+
+        .theme-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .theme-option.active {
+            background: rgba(204, 19, 63, 0.15);
+        }
+
+        .theme-option.active .theme-name {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .theme-option.active::after {
+            content: "✓";
+            margin-left: auto;
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .theme-swatch {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .theme-name {
+            font-size: 0.95rem;
+        }
+
         .btn-accent {
             background: var(--accent);
             border: 2px solid var(--accent);
@@ -3150,6 +3216,40 @@
                     <button class="btn btn-secondary" onclick="navigateToShiftSchedule()">Shift Schedule</button>
                     <button class="btn btn-secondary" onclick="navigateToMasterPersonnel()">Master Personnel</button>
                     <button class="btn btn-secondary" onclick="navigateToUserManagement()" style="background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #8b5cf6;">👤 Users</button>
+                    <div class="theme-selector-wrapper" style="position: relative;">
+                        <button class="btn btn-secondary" onclick="toggleThemeDropdown(event)" id="themeBtn">🎨 Themes</button>
+                        <div id="themeDropdown" class="theme-dropdown" style="display: none;">
+                            <div class="theme-dropdown-header">Choose Theme</div>
+                            <div class="theme-option" data-theme="default" onclick="selectTheme('default')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #cc133f 50%, #1a4d8f 50%);"></span>
+                                <span class="theme-name">Default</span>
+                            </div>
+                            <div class="theme-option" data-theme="midnight-blue" onclick="selectTheme('midnight-blue')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #3b82f6 50%, #1e3a8a 50%);"></span>
+                                <span class="theme-name">Midnight Blue</span>
+                            </div>
+                            <div class="theme-option" data-theme="forest" onclick="selectTheme('forest')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #10b981 50%, #064e3b 50%);"></span>
+                                <span class="theme-name">Forest</span>
+                            </div>
+                            <div class="theme-option" data-theme="royal-purple" onclick="selectTheme('royal-purple')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #a855f7 50%, #4c1d95 50%);"></span>
+                                <span class="theme-name">Royal Purple</span>
+                            </div>
+                            <div class="theme-option" data-theme="amber" onclick="selectTheme('amber')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #f59e0b 50%, #78350f 50%);"></span>
+                                <span class="theme-name">Amber</span>
+                            </div>
+                            <div class="theme-option" data-theme="slate" onclick="selectTheme('slate')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #64748b 50%, #1e293b 50%);"></span>
+                                <span class="theme-name">Slate</span>
+                            </div>
+                            <div class="theme-option" data-theme="light" onclick="selectTheme('light')">
+                                <span class="theme-swatch" style="background: linear-gradient(135deg, #cc133f 50%, #f1f5f9 50%); border: 1px solid #ccc;"></span>
+                                <span class="theme-name">Light Mode</span>
+                            </div>
+                        </div>
+                    </div>
                     <div class="user-info">
                         <span class="user-email" id="userEmail"></span>
                         <button class="logout-btn" onclick="handleLogout()">Sign Out</button>
@@ -4000,6 +4100,11 @@
                     console.log('Found role:', roleData.role);
                     currentUserRole = roleData.role;
                     
+                    // Apply user's saved theme if present
+                    if (roleData.theme && THEMES[roleData.theme]) {
+                        applyTheme(roleData.theme);
+                    }
+                    
                     // Load personnel data first to find the member
                     await loadPersonnelFromDB();
                     
@@ -4375,6 +4480,181 @@
             currentUserMember = null;
             showLoginPage();
         }
+
+        // ========== THEME MANAGEMENT ==========
+        const THEMES = {
+            'default': {
+                '--primary': '#1a4d8f',
+                '--primary-dark': '#0f3666',
+                '--accent': '#cc133f',
+                '--accent-light': '#e63956',
+                '--bg-dark': '#0a1929',
+                '--bg-card': '#152a42',
+                '--text-primary': '#e8eef5',
+                '--text-secondary': '#8fa3bf',
+                '--border': '#2d4664'
+            },
+            'midnight-blue': {
+                '--primary': '#1e3a8a',
+                '--primary-dark': '#172554',
+                '--accent': '#3b82f6',
+                '--accent-light': '#60a5fa',
+                '--bg-dark': '#0c1425',
+                '--bg-card': '#1e2a47',
+                '--text-primary': '#e8eef5',
+                '--text-secondary': '#94a3b8',
+                '--border': '#2e3a5c'
+            },
+            'forest': {
+                '--primary': '#065f46',
+                '--primary-dark': '#064e3b',
+                '--accent': '#10b981',
+                '--accent-light': '#34d399',
+                '--bg-dark': '#0a1f17',
+                '--bg-card': '#142b22',
+                '--text-primary': '#e8f5ee',
+                '--text-secondary': '#8fbf9f',
+                '--border': '#1f4032'
+            },
+            'royal-purple': {
+                '--primary': '#5b21b6',
+                '--primary-dark': '#4c1d95',
+                '--accent': '#a855f7',
+                '--accent-light': '#c084fc',
+                '--bg-dark': '#170c25',
+                '--bg-card': '#241638',
+                '--text-primary': '#efe8f5',
+                '--text-secondary': '#a98fbf',
+                '--border': '#3d2658'
+            },
+            'amber': {
+                '--primary': '#78350f',
+                '--primary-dark': '#451a03',
+                '--accent': '#f59e0b',
+                '--accent-light': '#fbbf24',
+                '--bg-dark': '#1a1208',
+                '--bg-card': '#2b1f10',
+                '--text-primary': '#f5ede0',
+                '--text-secondary': '#bfa98f',
+                '--border': '#4d3820'
+            },
+            'slate': {
+                '--primary': '#475569',
+                '--primary-dark': '#334155',
+                '--accent': '#64748b',
+                '--accent-light': '#94a3b8',
+                '--bg-dark': '#0f172a',
+                '--bg-card': '#1e293b',
+                '--text-primary': '#f1f5f9',
+                '--text-secondary': '#94a3b8',
+                '--border': '#334155'
+            },
+            'light': {
+                '--primary': '#1a4d8f',
+                '--primary-dark': '#0f3666',
+                '--accent': '#cc133f',
+                '--accent-light': '#e63956',
+                '--bg-dark': '#f1f5f9',
+                '--bg-card': '#ffffff',
+                '--text-primary': '#0f172a',
+                '--text-secondary': '#475569',
+                '--border': '#cbd5e1'
+            }
+        };
+
+        function applyTheme(themeName) {
+            const theme = THEMES[themeName] || THEMES['default'];
+            const root = document.documentElement;
+            Object.entries(theme).forEach(([varName, value]) => {
+                root.style.setProperty(varName, value);
+            });
+            // Update active state in dropdown
+            document.querySelectorAll('.theme-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.theme === themeName);
+            });
+            // Cache locally for instant load next time
+            try {
+                localStorage.setItem('tps_theme', themeName);
+            } catch (e) {
+                console.warn('Could not save theme to localStorage:', e);
+            }
+        }
+
+        function toggleThemeDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('themeDropdown');
+            const isOpen = dropdown.style.display === 'block';
+            dropdown.style.display = isOpen ? 'none' : 'block';
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('themeDropdown');
+            const wrapper = event.target.closest('.theme-selector-wrapper');
+            if (dropdown && !wrapper) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        async function selectTheme(themeName) {
+            applyTheme(themeName);
+            document.getElementById('themeDropdown').style.display = 'none';
+
+            // Persist to Supabase for this user
+            if (currentUser) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('user_roles')
+                        .update({ theme: themeName })
+                        .eq('user_id', currentUser.id);
+                    if (error) {
+                        console.warn('Could not save theme to database:', error);
+                        // Theme still works via localStorage even if DB save fails
+                    }
+                } catch (e) {
+                    console.warn('Theme DB save failed:', e);
+                }
+            }
+        }
+
+        async function loadUserTheme() {
+            // First, apply localStorage cache instantly to avoid flash
+            let themeName = 'default';
+            try {
+                const cached = localStorage.getItem('tps_theme');
+                if (cached && THEMES[cached]) {
+                    themeName = cached;
+                }
+            } catch (e) { /* ignore */ }
+
+            // Then check DB if user is logged in (authoritative source)
+            if (currentUser) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('user_roles')
+                        .select('theme')
+                        .eq('user_id', currentUser.id)
+                        .maybeSingle();
+                    if (!error && data && data.theme && THEMES[data.theme]) {
+                        themeName = data.theme;
+                    }
+                } catch (e) {
+                    console.warn('Could not load theme from database:', e);
+                }
+            }
+            applyTheme(themeName);
+        }
+
+        // Apply cached theme immediately on script load (before auth completes)
+        (function applyCachedThemeOnLoad() {
+            try {
+                const cached = localStorage.getItem('tps_theme');
+                if (cached && THEMES[cached]) {
+                    applyTheme(cached);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+        // ========== END THEME MANAGEMENT ==========
 
         // Sync Status Functions
         function setSyncStatus(status, text) {
