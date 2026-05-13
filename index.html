@@ -846,17 +846,6 @@
             color: #ffffff !important;
         }
 
-        /* The Count page time labels and y-axis numbers: white */
-        body.theme-light .count-bar-label {
-            color: #ffffff !important;
-        }
-        body.theme-light .count-y-axis {
-            color: #ffffff !important;
-        }
-        body.theme-light .count-y-axis span {
-            color: #ffffff !important;
-        }
-
         /* Dispatch and Call Take table column headers: white */
         body.theme-light .desk-table thead th {
             color: #ffffff !important;
@@ -881,6 +870,14 @@
         /* The Count page: time block headers (06:30 etc) in white */
         body.theme-light .count-table-header {
             color: #ffffff !important;
+        }
+        /* The Count page: bar chart axis fonts in primary-dark blue (matches header bg) */
+        body.theme-light .count-bar-label {
+            color: #0f3666 !important;
+        }
+        body.theme-light .count-y-axis,
+        body.theme-light .count-y-axis span {
+            color: #0f3666 !important;
         }
         /* The Count page: count cells get white background, with red/green font */
         body.theme-light .count-table-cell.meets-min {
@@ -2499,13 +2496,13 @@
         .count-chart-container {
             background: var(--bg-dark);
             border-radius: 8px;
-            padding: 1.5rem;
+            padding: 1.5rem 1.5rem 1.5rem 3.5rem;
             position: relative;
         }
 
         .count-chart-wrapper {
             display: flex;
-            overflow-x: auto;
+            width: 100%;
         }
 
         .count-y-axis {
@@ -2514,41 +2511,43 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.05rem;
+            font-weight: 700;
             color: var(--text-secondary);
             background: var(--bg-dark);
-            padding-right: 10px;
-            height: 170px;
+            padding-right: 12px;
+            height: 240px;
             z-index: 10;
-            min-width: 30px;
+            min-width: 40px;
             text-align: right;
         }
 
         .count-bar-chart {
             display: flex;
             align-items: flex-end;
-            gap: 2px;
-            height: 200px;
-            padding-bottom: 30px;
+            gap: 1px;
+            height: 280px;
+            padding-bottom: 40px;
             position: relative;
-            min-width: max-content;
-            padding-left: 10px;
-            border-left: 1px solid var(--border);
+            flex: 1;
+            min-width: 0;
+            padding-left: 12px;
+            border-left: 2px solid var(--border);
         }
 
         .count-bar-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 8px;
+            flex: 1;
+            min-width: 0;
         }
 
         .count-bar {
-            width: 6px;
+            width: 100%;
             min-height: 2px;
             transition: height 0.3s ease;
-            border-radius: 1px 1px 0 0;
+            border-radius: 2px 2px 0 0;
         }
 
         .count-bar.meets-min {
@@ -2560,13 +2559,14 @@
         }
 
         .count-bar-label {
-            font-size: 1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
             color: var(--text-secondary);
             writing-mode: vertical-rl;
             text-orientation: mixed;
             transform: rotate(180deg);
-            margin-top: 4px;
-            height: 28px;
+            margin-top: 6px;
+            height: 36px;
             white-space: nowrap;
         }
 
@@ -5354,7 +5354,7 @@
                 const count = counts[slot];
                 const minReq = minCallTakerRequirements[timeKey] || 11;
                 const meetsMin = count >= minReq;
-                const barHeight = (count / maxCount) * 170;
+                const barHeight = (count / maxCount) * 240;
                 const displayTime = timeKey.substring(0, 2) + timeKey.substring(2);
                 
                 // Only show label at 30-minute intervals (when minutes are 00 or 30)
