@@ -2277,7 +2277,7 @@
         .agent-map-chart th,
         .agent-map-chart td {
             min-width: 60px;
-            font-size: 0.65rem;
+            font-size: 1rem;
             padding: 0.3rem;
         }
 
@@ -2291,7 +2291,18 @@
             max-width: 80px;
         }
 
-        .agent-map-chart td.agent-cell:hover {
+        .agent-map-chart td.agent-cell-multi {
+            background: rgba(249, 158, 46, 0.2);
+            color: var(--text-primary);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 80px;
+        }
+
+        .agent-map-chart td.agent-cell:hover,
+        .agent-map-chart td.agent-cell-multi:hover {
             overflow: visible;
             white-space: normal;
             position: relative;
@@ -10978,7 +10989,12 @@
                 // For each 15-minute slot, get agent names
                 timeSlots.forEach(slot => {
                     const agents = getDeskAgents('dispatch', deskNum, slot.hour, slot.minute, slot.isNextDay);
-                    const cellClass = agents.length > 0 ? 'agent-cell' : '';
+                    let cellClass = '';
+                    if (agents.length >= 2) {
+                        cellClass = 'agent-cell-multi';
+                    } else if (agents.length === 1) {
+                        cellClass = 'agent-cell';
+                    }
                     const cellValue = agents.join(', ');
                     const cellTitle = agents.length > 0 ? agents.join(', ') : '';
                     bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
@@ -11013,7 +11029,12 @@
                 // For each 15-minute slot, get agent names
                 timeSlots.forEach(slot => {
                     const agents = getDeskAgents('calltake', deskNum, slot.hour, slot.minute, slot.isNextDay);
-                    const cellClass = agents.length > 0 ? 'agent-cell' : '';
+                    let cellClass = '';
+                    if (agents.length >= 2) {
+                        cellClass = 'agent-cell-multi';
+                    } else if (agents.length === 1) {
+                        cellClass = 'agent-cell';
+                    }
                     const cellValue = agents.join(', ');
                     const cellTitle = agents.length > 0 ? agents.join(', ') : '';
                     bodyHTML += `<td class="${cellClass}" title="${cellTitle}">${cellValue}</td>`;
