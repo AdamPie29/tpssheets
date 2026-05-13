@@ -872,6 +872,11 @@
         body.theme-light .reliever-desk-input {
             color: #000000 !important;
         }
+
+        /* Seating chart and Agent Map: time column headers along the top in white */
+        body.theme-light .seating-chart th {
+            color: #ffffff !important;
+        }
         /* ===== END LIGHT THEME OVERRIDES ===== */
 
         .btn-accent {
@@ -11103,15 +11108,19 @@
                         }
                     }
                     
-                    // Check reliever assignments
-                    // For next-day window (treatAsPreviousDay + isNextDay), look up with 'b' suffix
-                    // Skip relievers entirely when looking at previous date's overnight (not our schedule)
-                    const checkRelievers = !treatAsPreviousDay || isNextDay;
-                    if (checkRelievers && schedule.relieverDuties) {
+                    // Check reliever assignments.
+                    // The reliever grid covers 06:30 → 06:30 next day, with 06:30/06:45/07:00 
+                    // stored under 'b'-suffixed keys (the wrap-around boundary).
+                    // When treatAsPreviousDay=true for a boundary slot, use 'b' suffix to look 
+                    // up the next-day continuation. For 00:00-06:15, plain keys already represent
+                    // the overnight portion of the previous-day schedule.
+                    if (schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (!reliever.memberId || !reliever.schedule) return;
                             
-                            const suffix = (isNextDay && treatAsPreviousDay) ? 'b' : '';
+                            const isBoundarySlot = (hour === 6 && (minute === 30 || minute === 45)) || 
+                                                   (hour === 7 && minute === 0);
+                            const suffix = (treatAsPreviousDay && isBoundarySlot) ? 'b' : '';
                             const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}${suffix}`;
                             const assignedDesk = reliever.schedule[timeKey];
                             
@@ -11502,14 +11511,21 @@
                         });
                     }
                     
-                    // Check reliever duties for this schedule
-                    // For next-day window (treatAsPreviousDay + isNextDay), look up with 'b' suffix
-                    // Skip relievers entirely when looking at previous date's overnight (not our schedule)
-                    const checkRelievers = !treatAsPreviousDay || isNextDay;
-                    if (checkRelievers && schedule.relieverDuties) {
+                    // Check reliever duties for this schedule.
+                    // The reliever grid covers 06:30 → 06:30 next day, with 06:30/06:45/07:00 
+                    // at the very end stored under 'b'-suffixed keys (the wrap-around boundary).
+                    // 
+                    // When treatAsPreviousDay=true, we're asking "what's THIS reliever doing 
+                    // at the current chart time, which is the day AFTER this schedule's date?"
+                    //   - For 00:00-06:15: rows 7-9 plain keys already represent next-day overnight → no suffix
+                    //   - For 06:30/06:45/07:00 boundary: row 1 keys represent this schedule's morning,
+                    //     not next morning, so we need the 'b'-suffixed keys at row 9's end
+                    if (schedule.relieverDuties) {
                         schedule.relieverDuties.forEach(reliever => {
                             if (reliever.memberId && reliever.schedule) {
-                                const suffix = (isNextDay && treatAsPreviousDay) ? 'b' : '';
+                                const isBoundarySlot = (hour === 6 && (minute === 30 || minute === 45)) || 
+                                                       (hour === 7 && minute === 0);
+                                const suffix = (treatAsPreviousDay && isBoundarySlot) ? 'b' : '';
                                 const timeKey = `${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}${suffix}`;
                                 const assignedDesk = reliever.schedule[timeKey];
                                 
