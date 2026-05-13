@@ -838,9 +838,9 @@
             color: #ffffff !important;
         }
 
-        /* Section titles (Dispatch / Call Take / Special Situations / etc): white */
+        /* Section titles (Dispatch / Call Take / Special Situations / etc): black in light mode */
         body.theme-light .card-title {
-            color: #ffffff !important;
+            color: #000000 !important;
         }
         body.theme-light .seating-chart-title {
             color: #ffffff !important;
@@ -864,6 +864,15 @@
 
         /* Seating chart and Agent Map: time column headers along the top in white */
         body.theme-light .seating-chart th {
+            color: #ffffff !important;
+        }
+        /* But the "Desk" header (top-left corner) stays black for contrast */
+        body.theme-light .seating-chart th.desk-label {
+            color: #000000 !important;
+        }
+
+        /* Shift schedule: day-of-week headers in white */
+        body.theme-light .calendar-header {
             color: #ffffff !important;
         }
 
@@ -2276,7 +2285,7 @@
         /* Agent Map Chart */
         .agent-map-chart th,
         .agent-map-chart td {
-            min-width: 60px;
+            min-width: 140px;
             font-size: 1rem;
             padding: 0.3rem;
         }
@@ -2288,7 +2297,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 80px;
+            max-width: 140px;
         }
 
         .agent-map-chart td.agent-cell-multi {
@@ -2298,7 +2307,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 80px;
+            max-width: 140px;
         }
 
         .agent-map-chart td.agent-cell:hover,
@@ -10514,13 +10523,22 @@
                     '0030': '', '0045': '', '0100': '', '0115': '', '0130': '', '0145': '',
                     '0200': '', '0215': '', '0230': '', '0245': '', '0300': '', '0315': '',
                     '0330': '', '0345': '', '0400': '', '0415': '', '0430': '', '0445': '',
-                    '0500': '', '0515': '', '0530': '', '0545': '', '0600': '', '0615': ''
+                    '0500': '', '0515': '', '0530': '', '0545': '', '0600': '', '0615': '',
+                    '0630b': '', '0645b': '', '0700b': ''
                 }
             };
             
             state.relieverDuties.push(reliever);
             renderRelieverDuties();
             updateNavCounts();
+            
+            // Scroll to the newly-created card after the DOM updates
+            requestAnimationFrame(() => {
+                const newCard = document.getElementById(`relieverCard-${reliever.id}`);
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
         }
 
         function removeRelieverDuty(relieverId) {
@@ -10745,7 +10763,7 @@
                 const endTime = positionHours.end ? positionHours.end.replace(':', '') : '';
                 
                 return `
-                    <div class="reliever-duty-card">
+                    <div class="reliever-duty-card" id="relieverCard-${reliever.id}">
                         <div class="reliever-duty-header">
                             <div class="reliever-duty-title">Reliever ${reliever.id}</div>
                             <div style="display: flex; gap: 1rem; align-items: center;">
