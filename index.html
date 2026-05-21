@@ -9961,46 +9961,79 @@
         }
 
         // ========== AUTO-SAVE SYSTEM ==========
-        const AUTOSAVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-        let autoSaveTimerHandle = null;
+        // Uses a timestamp-based check rather than a single setTimeout, because browsers
+        // aggressively throttle setTimeout in background tabs (Chrome can extend timers to
+        // 1-minute granularity after 5min of being backgrounded). A short polling interval
+        // combined with a visibilitychange listener ensures we catch up promptly when the
+        // user returns to the tab.
+        const AUTOSAVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes between saves
+        const AUTOSAVE_CHECK_MS = 30 * 1000;          // check every 30 seconds
+        let lastSaveTimestamp = 0;
+        let autoSavePollHandle = null;
 
         function scheduleAutoSave() {
-            // Clear any pending timer, then set a fresh 10-minute timer
-            if (autoSaveTimerHandle) {
-                clearTimeout(autoSaveTimerHandle);
+            // Mark "now" as the last save time. The polling check will then wait
+            // AUTOSAVE_INTERVAL_MS before firing the next auto-save.
+            lastSaveTimestamp = Date.now();
+            console.log('[autosave] timer reset at', new Date(lastSaveTimestamp).toLocaleTimeString());
+            
+            // Start the polling loop if it isn't already running
+            if (!autoSavePollHandle) {
+                autoSavePollHandle = setInterval(autoSavePollCheck, AUTOSAVE_CHECK_MS);
+                // Also wake up when the tab becomes visible again
+                document.addEventListener('visibilitychange', onVisibilityChangeForAutoSave);
             }
-            autoSaveTimerHandle = setTimeout(triggerAutoSave, AUTOSAVE_INTERVAL_MS);
+        }
+
+        function onVisibilityChangeForAutoSave() {
+            if (document.visibilityState === 'visible') {
+                autoSavePollCheck();
+            }
+        }
+
+        function autoSavePollCheck() {
+            const elapsed = Date.now() - lastSaveTimestamp;
+            if (elapsed >= AUTOSAVE_INTERVAL_MS) {
+                console.log('[autosave] interval elapsed (', Math.round(elapsed/1000), 's), firing save');
+                triggerAutoSave();
+            }
         }
 
         async function triggerAutoSave() {
             // Skip if no date selected (nothing meaningful to save)
             const dateInput = document.getElementById('scheduleDate');
             if (!dateInput || !dateInput.value) {
-                // Reschedule for later in case user picks a date soon
-                scheduleAutoSave();
+                console.log('[autosave] skipped: no date selected');
+                lastSaveTimestamp = Date.now(); // wait another full interval before retrying
                 return;
             }
             // Skip if a save is already in progress
             if (window._isSavingSchedule) {
-                scheduleAutoSave();
-                return;
+                console.log('[autosave] skipped: another save in progress');
+                return; // poll will retry on next tick
             }
             // Skip if user is currently signed out
-            if (!currentUser) return;
+            if (!currentUser) {
+                console.log('[autosave] skipped: no current user');
+                return;
+            }
             
-            await saveSchedule(true); // silent = true
-            // saveSchedule's success path already calls scheduleAutoSave() to reset
-            // the timer. If it failed, schedule the next attempt manually.
-            if (!autoSaveTimerHandle) {
-                scheduleAutoSave();
+            console.log('[autosave] calling saveSchedule(silent=true)');
+            await saveSchedule(true);
+            // saveSchedule resets lastSaveTimestamp via scheduleAutoSave() on success.
+            // On failure, advance the timestamp to wait a full interval before retrying.
+            if (Date.now() - lastSaveTimestamp >= AUTOSAVE_INTERVAL_MS) {
+                lastSaveTimestamp = Date.now();
             }
         }
 
         function cancelAutoSave() {
-            if (autoSaveTimerHandle) {
-                clearTimeout(autoSaveTimerHandle);
-                autoSaveTimerHandle = null;
+            if (autoSavePollHandle) {
+                clearInterval(autoSavePollHandle);
+                autoSavePollHandle = null;
             }
+            document.removeEventListener('visibilitychange', onVisibilityChangeForAutoSave);
+            lastSaveTimestamp = 0;
         }
 
         function showAutoSaveToast(isError = false) {
